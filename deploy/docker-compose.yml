@@ -1,0 +1,73 @@
+version: '3.9'
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: ./deploy/Dockerfile
+      target: prod
+    image: fia_api:${FIA_API_VERSION:-latest}
+    restart: always
+    env_file:
+    - .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      FIA_API_HOST: 0.0.0.0
+      FIA_API_DB_HOST: fia_api-db
+      FIA_API_DB_PORT: 5432
+      FIA_API_DB_USER: fia_api
+      FIA_API_DB_PASS: fia_api
+      FIA_API_DB_BASE: fia_api
+      FIA_API_REDIS_HOST: fia_api-redis
+
+  db:
+    image: postgres:13.8-bullseye
+    hostname: fia_api-db
+    environment:
+      POSTGRES_PASSWORD: "fia_api"
+      POSTGRES_USER: "fia_api"
+      POSTGRES_DB: "fia_api"
+    volumes:
+    - fia_api-db-data:/var/lib/postgresql/data
+    restart: always
+    healthcheck:
+      test: pg_isready -U fia_api
+      interval: 2s
+      timeout: 3s
+      retries: 40
+
+  migrator:
+    image: fia_api:${FIA_API_VERSION:-latest}
+    restart: "no"
+    command: aerich upgrade
+    environment:
+      FIA_API_DB_HOST: fia_api-db
+      FIA_API_DB_PORT: 5432
+      FIA_API_DB_USER: fia_api
+      FIA_API_DB_PASS: fia_api
+      FIA_API_DB_BASE: fia_api
+    depends_on:
+      db:
+        condition: service_healthy
+
+  redis:
+    image: bitnami/redis:6.2.5
+    hostname: "fia_api-redis"
+    restart: always
+    environment:
+      ALLOW_EMPTY_PASSWORD: "yes"
+    healthcheck:
+      test: redis-cli ping
+      interval: 1s
+      timeout: 3s
+      retries: 50
+
+
+
+volumes:
+  fia_api-db-data:
+    name: fia_api-db-data

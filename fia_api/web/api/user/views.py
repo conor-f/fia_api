@@ -77,6 +77,10 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()) -> TokenSchema
             detail="Incorrect username or password",
         )
 
+    user_details = await UserDetailsModel.get(user_id=user.id)
+    user_details.times_logged_in += 1
+    await user_details.save()
+
     return TokenSchema(
         access_token=create_access_token(user.username),
         refresh_token=create_refresh_token(user.username),

@@ -55,6 +55,11 @@ class Settings(BaseSettings):
     redis_pass: Optional[str] = None
     redis_base: Optional[int] = None
 
+    # Variables for Auth:
+    # Override these in env.
+    jwt_secret_key: str = "jwt_secret_key"
+    jwt_refresh_secret_key: str = "jwt_refresh_secret_key"
+
     @property
     def db_url(self) -> URL:
         """

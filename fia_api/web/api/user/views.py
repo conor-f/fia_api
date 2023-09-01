@@ -35,12 +35,13 @@ async def create_user(new_user_request: CreateUserRequest) -> None:
             detail="username already exists",
         )
 
-    user_model = await UserModel.create(
+    user_details_model = await UserDetailsModel.create()
+
+    await UserModel.create(
         username=new_user_request.username,
         password_hash=get_hashed_password(new_user_request.password),
+        user_details=user_details_model,
     )
-
-    await UserDetailsModel.create(user_id=user_model)
 
 
 @router.post("/delete", status_code=200)  # noqa: WPS432
@@ -77,7 +78,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()) -> TokenSchema
             detail="Incorrect username or password",
         )
 
-    user_details = await UserDetailsModel.get(user_id=user.id)
+    user_details = await user.user_details.get()
     user_details.times_logged_in += 1
     await user_details.save()
 
@@ -102,9 +103,9 @@ async def get_user_details(
     :returns: UserDetails
     """
     user_model = await UserModel.get(username=user.username)
-    user_details = await UserDetailsModel.get(user_id=user_model.id)
+    user_details = await user_model.user_details.get()
 
     return UserDetails(
-        username=user.username,
+        username=user_model.username,
         times_logged_in=user_details.times_logged_in,
     )

@@ -40,7 +40,7 @@ repos:
 
   - id: isort
     name: isort
-    entry: poetry run isort
+    entry: poetry run isort fia_api/
     language: system
     types: [python]
 

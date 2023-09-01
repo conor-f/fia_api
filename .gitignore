@@ -110,6 +110,7 @@ celerybeat.pid
 
 # Environments
 .env
+.github_env.secrets
 .venv
 env/
 venv/

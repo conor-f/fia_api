@@ -72,6 +72,8 @@ ignore =
   WPS473,
   ; too many no-cover comments.
   WPS403,
+  ; Too many await expressions.
+  WPS217
   ; Too many assert statements.
   WPS218
 

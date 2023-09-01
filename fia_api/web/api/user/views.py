@@ -97,6 +97,10 @@ async def get_user_details(
     :param user: AuthenticatedUser
     :returns: UserDetails
     """
+    user_model = await UserModel.get(username=user.username)
+    user_details = await UserDetailsModel.get(user_id=user_model.id)
+
     return UserDetails(
         username=user.username,
+        times_logged_in=user_details.times_logged_in,
     )

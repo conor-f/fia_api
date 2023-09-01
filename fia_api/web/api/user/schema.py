@@ -46,3 +46,4 @@ class UserDetails(BaseModel):
     """A user details."""
 
     username: str
+    times_logged_in: int

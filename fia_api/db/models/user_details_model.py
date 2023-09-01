@@ -1,7 +1,7 @@
 from tortoise import fields
 
 from fia_api.db.models.fia_base_model import FiaBaseModel
-from fia_api.db.models.user import UserModel
+from fia_api.db.models.user_model import UserModel
 
 
 class UserDetailsModel(FiaBaseModel):
@@ -9,7 +9,7 @@ class UserDetailsModel(FiaBaseModel):
 
     user_id: fields.ForeignKeyRelation[UserModel] = fields.ForeignKeyField(
         "models.UserModel",
-        related_name="id",
+        related_name="UserModel.id",
     )
 
     times_logged_in = fields.IntField(null=False, default=0)

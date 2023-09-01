@@ -72,6 +72,8 @@ ignore =
   WPS473,
   ; too many no-cover comments.
   WPS403,
+  ; Too many assert statements.
+  WPS218
 
 per-file-ignores =
   ; all tests

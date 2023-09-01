@@ -3,7 +3,6 @@ from typing import List
 from fia_api.settings import settings
 
 MODELS_MODULES: List[str] = [
-    "fia_api.db.models.fia_base_model",
     "fia_api.db.models.dummy_model",
     "fia_api.db.models.user_model",
     "fia_api.db.models.user_details_model",

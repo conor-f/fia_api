@@ -15,7 +15,4 @@ async def send_echo_message(
     :param incoming_message: incoming message.
     :returns: message same as the incoming.
     """
-    response_message = incoming_message
-    response_message.message = f"Response: {incoming_message.message}"
-
-    return response_message
+    return incoming_message

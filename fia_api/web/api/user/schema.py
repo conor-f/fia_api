@@ -9,12 +9,6 @@ class CreateUserRequest(BaseModel):
     is_fully_registered: bool | None = None
 
 
-class DeleteUserRequest(BaseModel):
-    """Request object for calls to the delete user endpoint."""
-
-    username: str
-
-
 class TokenSchema(BaseModel):
     """Token returned from login."""
 

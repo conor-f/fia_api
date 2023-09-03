@@ -6,7 +6,6 @@ from fia_api.db.models.user_model import UserModel
 from fia_api.web.api.user.schema import (
     AuthenticatedUser,
     CreateUserRequest,
-    DeleteUserRequest,
     TokenSchema,
     UserDetails,
 )
@@ -45,14 +44,14 @@ async def create_user(new_user_request: CreateUserRequest) -> None:
 
 
 @router.post("/delete", status_code=200)  # noqa: WPS432
-async def delete_user(delete_user_request: DeleteUserRequest) -> None:
+async def delete_user(user: AuthenticatedUser = Depends(get_current_user)) -> None:
     """
     Delete user model in the database.
 
-    :param delete_user_request: The user to delete.
+    :param user: The authenticated user to delete.
     """
-    user = await UserModel.get(username=delete_user_request.username)
-    await user.delete()
+    user_model = await UserModel.get(username=user.username)
+    await user_model.delete()
 
 
 @router.post("/login", response_model=TokenSchema)

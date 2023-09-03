@@ -8,7 +8,10 @@ from fia_api.db.models.user_model import UserModel
 
 
 @pytest.mark.anyio
-async def test_create_delete_user(fastapi_app: FastAPI, client: AsyncClient) -> None:
+async def test_create_login_delete_user(
+    fastapi_app: FastAPI,
+    client: AsyncClient,
+) -> None:
     """
     Tests that create and delete user routes works.
 
@@ -16,6 +19,7 @@ async def test_create_delete_user(fastapi_app: FastAPI, client: AsyncClient) -> 
     :param client: client for the app.
     """
     create_url = fastapi_app.url_path_for("create_user")
+    login_url = fastapi_app.url_path_for("login")
     delete_url = fastapi_app.url_path_for("delete_user")
 
     username = str(uuid.uuid4())
@@ -44,7 +48,27 @@ async def test_create_delete_user(fastapi_app: FastAPI, client: AsyncClient) -> 
             "username": username,
         },
     )
+    assert response.status_code == 401
 
+    response = await client.post(
+        login_url,
+        data={
+            "username": username,
+            "password": password,
+        },
+        headers={
+            "content-type": "application/x-www-form-urlencoded",
+        },
+    )
+    assert response.status_code == 200
+    access_token = response.json()["access_token"]
+
+    response = await client.post(
+        delete_url,
+        headers={
+            "Authorization": f"Bearer {access_token}",
+        },
+    )
     assert response.status_code == 200
     matched_users = await UserModel.filter(username=username)
     assert not matched_users

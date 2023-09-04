@@ -60,6 +60,8 @@ class Settings(BaseSettings):
     jwt_secret_key: str = "jwt_secret_key"
     jwt_refresh_secret_key: str = "jwt_refresh_secret_key"
 
+    openai_api_key: str = "INVALID_OPENAI_API_KEY"
+
     @property
     def db_url(self) -> URL:
         """

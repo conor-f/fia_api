@@ -1,12 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 
+from fia_api.db.models.user_conversation_model import UserConversationModel
 from fia_api.db.models.user_details_model import UserDetailsModel
 from fia_api.db.models.user_model import UserModel
 from fia_api.web.api.user.schema import (
     AuthenticatedUser,
+    ConversationSnippet,
     CreateUserRequest,
     TokenSchema,
+    UserConversationList,
     UserDetails,
 )
 from fia_api.web.api.user.utils import (
@@ -108,3 +111,30 @@ async def get_user_details(
         username=user_model.username,
         times_logged_in=user_details.times_logged_in,
     )
+
+
+@router.get(
+    "/get-conversations",
+    summary="Get previous conversations of a user",
+    response_model=UserConversationList,
+)
+async def get_user_conversations_list(
+    user: AuthenticatedUser = Depends(get_current_user),
+) -> UserConversationList:
+    """
+    Returns the logged in user's previous conversation details.
+
+    :param user: AuthenticatedUser
+    :returns: UserConversationList
+    """
+    user_model = await UserModel.get(username=user.username)
+    conversations = await UserConversationModel.filter(user=user_model).values()
+
+    conversation_list = [
+        ConversationSnippet(
+            conversation_id=str(conversation["conversation_id"]),
+            conversation_intro="TODO: Conversation snippet.",
+        )
+        for conversation in conversations
+    ]
+    return UserConversationList(conversations=conversation_list)

@@ -1,3 +1,5 @@
+from typing import List
+
 from pydantic import BaseModel
 
 
@@ -41,3 +43,29 @@ class UserDetails(BaseModel):
 
     username: str
     times_logged_in: int
+
+
+class ConversationSnippet(BaseModel):
+    """A simple preview of a conversation."""
+
+    conversation_id: str
+    conversation_intro: str
+
+
+class UserConversationList(BaseModel):
+    """A list of a user's conversations with the conversation ID and details."""
+
+    conversations: List[ConversationSnippet]
+
+
+class ConversationLine(BaseModel):
+    """A single line of a conversation."""
+
+    role: str
+    content: str
+
+
+class UserConversationResponse(BaseModel):
+    """A conversation a user had."""
+
+    conversation: List[ConversationLine]

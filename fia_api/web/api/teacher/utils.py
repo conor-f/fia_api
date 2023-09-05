@@ -10,6 +10,8 @@ from fia_api.db.models.conversation_model import (
     ConversationElementRole,
 )
 from fia_api.db.models.token_usage_model import TokenUsageModel
+from fia_api.db.models.user_conversation_model import UserConversationModel
+from fia_api.db.models.user_model import UserModel
 from fia_api.settings import settings
 from fia_api.web.api.teacher.schema import TeacherConverseResponse, TeacherResponse
 
@@ -91,13 +93,17 @@ async def get_response(conversation_id: str, message: str) -> TeacherConverseRes
     )
 
 
-async def initialize_conversation(message: str) -> TeacherConverseResponse:
+async def initialize_conversation(
+    user: UserModel,
+    message: str,
+) -> TeacherConverseResponse:
     """
     Starts the conversation.
 
     Set up the DB with the initial conversation prompt and return the new
     conversation ID, along with the first response from the model.
 
+    :param user: The user initiating the conversation.
     :param message: The message to start the conversation with.
     :returns: TeacherConverseResponse of the teacher's first reply.
     """
@@ -107,6 +113,11 @@ async def initialize_conversation(message: str) -> TeacherConverseResponse:
         conversation_id=conversation_id,
         role=ConversationElementRole.SYSTEM,
         content=settings.prompts["p3"],
+    )
+
+    await UserConversationModel.create(
+        user=user,
+        conversation_id=conversation_id,
     )
 
     await TokenUsageModel.create(conversation_id=conversation_id)

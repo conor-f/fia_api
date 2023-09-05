@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends
 
+from fia_api.db.models.user_model import UserModel
 from fia_api.web.api.teacher.schema import (
     TeacherConverseRequest,
     TeacherConverseResponse,
@@ -24,7 +25,10 @@ async def converse(
     :returns: TeacherConverseResponse of mistakes and conversation.
     """
     if converse_request.conversation_id == "new":
-        return await initialize_conversation(converse_request.message)
+        return await initialize_conversation(
+            await UserModel.get(username=user.username),
+            converse_request.message,
+        )
 
     return await get_response(
         converse_request.conversation_id,

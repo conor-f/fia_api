@@ -10,7 +10,6 @@ from fia_api.db.models.conversation_model import (
     ConversationElementRole,
 )
 from fia_api.settings import settings
-from fia_api.web.api.teacher import PROMPTS
 from fia_api.web.api.teacher.schema import TeacherConverseResponse, TeacherResponse
 
 openai.api_key = settings.openai_api_key
@@ -101,7 +100,7 @@ async def initialize_conversation(message: str) -> TeacherConverseResponse:
     await ConversationElementModel.create(
         conversation_id=conversation_id,
         role=ConversationElementRole.SYSTEM,
-        content=PROMPTS["p3"],
+        content=settings.prompts["p3"],
     )
 
     return await get_response(str(conversation_id), message)

@@ -24,9 +24,9 @@ async def converse(
     :returns: TeacherConverseResponse of mistakes and conversation.
     """
     if converse_request.conversation_id == "new":
-        return initialize_conversation(converse_request.message)
+        return await initialize_conversation(converse_request.message)
 
-    return get_response(
+    return await get_response(
         converse_request.conversation_id,
         converse_request.message,
     )

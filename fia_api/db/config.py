@@ -6,6 +6,7 @@ MODELS_MODULES: List[str] = [
     "fia_api.db.models.dummy_model",
     "fia_api.db.models.user_model",
     "fia_api.db.models.user_details_model",
+    "fia_api.db.models.conversation_model",
 ]  # noqa: WPS407
 
 TORTOISE_CONFIG = {  # noqa: WPS407

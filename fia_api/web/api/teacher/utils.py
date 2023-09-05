@@ -9,6 +9,7 @@ from fia_api.db.models.conversation_model import (
     ConversationElementModel,
     ConversationElementRole,
 )
+from fia_api.db.models.token_usage_model import TokenUsageModel
 from fia_api.settings import settings
 from fia_api.web.api.teacher.schema import TeacherConverseResponse, TeacherResponse
 
@@ -77,7 +78,12 @@ async def get_response(conversation_id: str, message: str) -> TeacherConverseRes
         content=teacher_response,
     )
 
-    # TODO: Store the token usage in the DB...
+    token_usage_model = await TokenUsageModel.get(
+        conversation_id=uuid.UUID(conversation_id),
+    )
+    token_usage_model.prompt_token_usage += chat_response.usage["prompt_tokens"]
+    token_usage_model.completion_token_usage += chat_response.usage["completion_tokens"]
+    await token_usage_model.save()
 
     return TeacherConverseResponse(
         conversation_id=conversation_id,
@@ -102,5 +108,7 @@ async def initialize_conversation(message: str) -> TeacherConverseResponse:
         role=ConversationElementRole.SYSTEM,
         content=settings.prompts["p3"],
     )
+
+    await TokenUsageModel.create(conversation_id=conversation_id)
 
     return await get_response(str(conversation_id), message)

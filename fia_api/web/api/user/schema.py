@@ -56,3 +56,16 @@ class UserConversationList(BaseModel):
     """A list of a user's conversations with the conversation ID and details."""
 
     conversations: List[ConversationSnippet]
+
+
+class ConversationLine(BaseModel):
+    """A single line of a conversation."""
+
+    role: str
+    content: str
+
+
+class UserConversationResponse(BaseModel):
+    """A conversation a user had."""
+
+    conversation: List[ConversationLine]

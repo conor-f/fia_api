@@ -1,15 +1,20 @@
+import uuid
+
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 
+from fia_api.db.models.conversation_model import ConversationElementModel
 from fia_api.db.models.user_conversation_model import UserConversationModel
 from fia_api.db.models.user_details_model import UserDetailsModel
 from fia_api.db.models.user_model import UserModel
 from fia_api.web.api.user.schema import (
     AuthenticatedUser,
+    ConversationLine,
     ConversationSnippet,
     CreateUserRequest,
     TokenSchema,
     UserConversationList,
+    UserConversationResponse,
     UserDetails,
 )
 from fia_api.web.api.user.utils import (
@@ -138,3 +143,48 @@ async def get_user_conversations_list(
         for conversation in conversations
     ]
     return UserConversationList(conversations=conversation_list)
+
+
+@router.get(
+    "/get-conversation",
+    summary="Get previous conversation of a user",
+    response_model=UserConversationResponse,
+)
+async def get_user_conversations(
+    conversation_id: str,
+    user: AuthenticatedUser = Depends(get_current_user),
+) -> UserConversationResponse:
+    """
+    Returns the details of a conversation specified by conversation_id.
+
+    :param conversation_id: String conversation_id
+    :param user: AuthenticatedUser
+    :returns: UserConversationResponse
+    :raises HTTPException: When they don't have permission to see conversation.
+    """
+    user_model = await UserModel.get(username=user.username)
+
+    if not await UserConversationModel.exists(  # noqa: WPS337
+        user=user_model,
+        conversation_id=uuid.UUID(conversation_id),
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_BAD_REQUEST,
+            detail="Don't have permission to access that conversation.",
+        )
+
+    # TODO: This is duplicated code. This should be formalized into a more
+    # sensible object.
+    raw_conversation = await ConversationElementModel.filter(
+        conversation_id=uuid.UUID(conversation_id),
+    ).values()
+
+    return UserConversationResponse(
+        conversation=[
+            ConversationLine(
+                role=conversation_element["role"].value,
+                content=conversation_element["content"],
+            )
+            for conversation_element in raw_conversation
+        ],
+    )

@@ -141,7 +141,8 @@ async def format_conversation_element(
     :param conversation_element: A dict of the current conversation element.
     :returns: A sensible representation of the conversation element.
     """
-    if conversation_element["role"] == ConversationElementRole.SYSTEM.value:
+    # Ignoring type here as MyPy doesn't co-operate with Tortoise ORM for enums.
+    if conversation_element["role"] == ConversationElementRole.SYSTEM:  # type: ignore
         return TeacherConversationElement(
             response=TeacherResponse(
                 **json.loads(conversation_element["content"]),

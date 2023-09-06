@@ -122,7 +122,7 @@ async def get_user_details(
     summary="Get previous conversations of a user",
     response_model=UserConversationList,
 )
-async def get_user_conversations_list(
+async def list_user_conversations(
     user: AuthenticatedUser = Depends(get_current_user),
 ) -> UserConversationList:
     """
@@ -149,7 +149,7 @@ async def get_user_conversations_list(
     summary="Get previous conversation of a user",
     response_model=ConversationResponse,
 )
-async def get_user_conversations(
+async def get_user_conversation(
     conversation_id: str,
     user: AuthenticatedUser = Depends(get_current_user),
 ) -> ConversationResponse:

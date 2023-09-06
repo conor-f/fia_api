@@ -1,4 +1,5 @@
 # noqa: WPS462
+import json
 import uuid
 from typing import Dict, List
 
@@ -71,9 +72,12 @@ async def get_response(conversation_id: str, message: str) -> ConversationRespon
         function_call={"name": "get_answer_for_user_query"},
     )
 
-    teacher_response = chat_response.choices[  # noqa: WPS219
-        0
-    ].message.function_call.arguments
+    # Do this JSON dance to have it serialize correctly.
+    teacher_response = json.dumps(
+        json.loads(
+            chat_response.choices[0].message.function_call.arguments,  # noqa: WPS219
+        ),
+    )
 
     await ConversationElementModel.create(
         conversation_id=uuid.UUID(conversation_id),

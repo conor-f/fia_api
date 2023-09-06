@@ -141,8 +141,7 @@ async def format_conversation_element(
     :param conversation_element: A dict of the current conversation element.
     :returns: A sensible representation of the conversation element.
     """
-    role = ConversationElementRole[conversation_element["role"].lower()]
-    if role == ConversationElementRole.SYSTEM:
+    if conversation_element["role"] == ConversationElementRole.SYSTEM.value:
         return TeacherConversationElement(
             response=TeacherResponse(
                 **json.loads(conversation_element["content"]),
@@ -171,14 +170,22 @@ async def format_conversation_for_response(
     if last:
         raw_conversation = [raw_conversation[-1]]
 
-    return ConversationResponse(
-        conversation_id=conversation_id,
-        conversation=[
-            ConversationElement(
-                conversation_element=await format_conversation_element(
-                    conversation_element,
+    conversation_list = []
+    for conversation_element in raw_conversation:
+        try:
+            conversation_list.append(
+                ConversationElement(
+                    conversation_element=await format_conversation_element(
+                        conversation_element,
+                    ),
                 ),
             )
-            for conversation_element in raw_conversation
-        ],
+        except Exception as ex:
+            # TODO: This is expected in the case of the initial assistant
+            # message.
+            logger.debug(ex)
+
+    return ConversationResponse(
+        conversation_id=conversation_id,
+        conversation=conversation_list,
     )

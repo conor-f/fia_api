@@ -33,22 +33,3 @@ class TeacherConverseRequest(BaseModel):
     # If conversation_id is "new", then start a new conversation.
     conversation_id: str
     message: str
-
-
-class TeacherConverseResponse(BaseModel):
-    """Response from a call to the teacher/converse endpoint."""
-
-    conversation_id: str
-    response: TeacherResponse
-
-
-class TeacherConverseEndRequest(BaseModel):
-    """Response from a call to the teacher/end_converse endpoint."""
-
-    conversation_id: str
-
-
-class TeacherConverseEndResponse(BaseModel):
-    """Response from a call to the teacher/end_converse endpoint."""
-
-    message: str

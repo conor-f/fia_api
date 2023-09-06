@@ -1,6 +1,8 @@
-from typing import List
+from typing import List, Union
 
 from pydantic import BaseModel
+
+from fia_api.web.api.teacher.schema import TeacherResponse
 
 
 class CreateUserRequest(BaseModel):
@@ -61,11 +63,32 @@ class UserConversationList(BaseModel):
 class ConversationLine(BaseModel):
     """A single line of a conversation."""
 
-    role: str
-    content: str
+    # If str, then this is just a user response.
+    line: Union[TeacherResponse, str]
 
 
-class UserConversationResponse(BaseModel):
+class UserConversationElement(BaseModel):
+    """The user part of the conversation."""
+
+    role: str = "user"
+    message: str
+
+
+class TeacherConversationElement(BaseModel):
+    """The teacher response."""
+
+    role: str = "teacher"
+    response: TeacherResponse
+
+
+class ConversationElement(BaseModel):
+    """A single part of a conversation. Either from the user or system."""
+
+    conversation_element: Union[TeacherConversationElement, UserConversationElement]
+
+
+class ConversationResponse(BaseModel):
     """A conversation a user had."""
 
-    conversation: List[ConversationLine]
+    conversation_id: str
+    conversation: List[ConversationElement]

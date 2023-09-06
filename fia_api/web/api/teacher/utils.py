@@ -1,5 +1,4 @@
 # noqa: WPS462
-import json
 import uuid
 from typing import Dict, List
 
@@ -13,7 +12,9 @@ from fia_api.db.models.token_usage_model import TokenUsageModel
 from fia_api.db.models.user_conversation_model import UserConversationModel
 from fia_api.db.models.user_model import UserModel
 from fia_api.settings import settings
-from fia_api.web.api.teacher.schema import TeacherConverseResponse, TeacherResponse
+from fia_api.web.api.teacher.schema import TeacherResponse
+from fia_api.web.api.user.schema import ConversationResponse
+from fia_api.web.api.user.utils import format_conversation_for_response
 
 openai.api_key = settings.openai_api_key
 
@@ -40,7 +41,7 @@ async def get_messages_from_conversation_id(
     ]
 
 
-async def get_response(conversation_id: str, message: str) -> TeacherConverseResponse:
+async def get_response(conversation_id: str, message: str) -> ConversationResponse:
     """
     Converse with OpenAI.
 
@@ -49,7 +50,7 @@ async def get_response(conversation_id: str, message: str) -> TeacherConverseRes
 
     :param conversation_id: String ID representing the conversation.
     :param message: String message the user wants to send.
-    :return: TeacherResponse
+    :return: ConversationResponse
     """
     await ConversationElementModel.create(
         conversation_id=uuid.UUID(conversation_id),
@@ -87,16 +88,16 @@ async def get_response(conversation_id: str, message: str) -> TeacherConverseRes
     token_usage_model.completion_token_usage += chat_response.usage["completion_tokens"]
     await token_usage_model.save()
 
-    return TeacherConverseResponse(
-        conversation_id=conversation_id,
-        response=json.loads(teacher_response),
+    return await format_conversation_for_response(
+        conversation_id,
+        last=True,
     )
 
 
 async def initialize_conversation(
     user: UserModel,
     message: str,
-) -> TeacherConverseResponse:
+) -> ConversationResponse:
     """
     Starts the conversation.
 
@@ -105,7 +106,7 @@ async def initialize_conversation(
 
     :param user: The user initiating the conversation.
     :param message: The message to start the conversation with.
-    :returns: TeacherConverseResponse of the teacher's first reply.
+    :returns: ConversationResponse of the teacher's first reply.
     """
     conversation_id = uuid.uuid4()
 

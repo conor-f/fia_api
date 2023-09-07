@@ -30,6 +30,8 @@ python-jose = {extras = ["cryptography"], version = "^3.3.0"}
 python-multipart = "^0.0.6"
 openai = "^0.28.0"
 pytest-mock = "^3.11.1"
+python-dateutil = "^2.8.2"
+types-python-dateutil = "^2.8.19.14"
 
 
 [tool.poetry.dev-dependencies]

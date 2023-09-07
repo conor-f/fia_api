@@ -1,8 +1,42 @@
 import uuid
+from dataclasses import dataclass
+from typing import Dict, List
 
 import pytest
 from fastapi import FastAPI
 from httpx import AsyncClient
+from pytest_mock import MockerFixture
+
+
+@dataclass
+class OpenAIAPIFunctionCall:
+    """Mock class for OpenAI Chat Completion."""
+
+    name: str
+    arguments: str
+
+
+@dataclass
+class OpenAIAPIMessage:
+    """Mock class for OpenAI Chat Completion."""
+
+    role: str
+    function_call: OpenAIAPIFunctionCall
+
+
+@dataclass
+class OpenAIAPIChoices:
+    """Mock class for OpenAI Chat Completion."""
+
+    message: OpenAIAPIMessage
+
+
+@dataclass
+class OpenAIAPIResponse:
+    """Mock class for OpenAI Chat Completion."""
+
+    choices: List[OpenAIAPIChoices]
+    usage: Dict[str, int]
 
 
 async def get_access_token(
@@ -50,12 +84,14 @@ async def get_access_token(
 async def test_conversations(
     fastapi_app: FastAPI,
     client: AsyncClient,
+    mocker: MockerFixture,
 ) -> None:
     """
     Tests that conversation routes work.
 
     :param fastapi_app: current application.
     :param client: client for the app.
+    :param mocker: Automatically supplied by pytest to mock objects.
     """
     access_token = await get_access_token(fastapi_app, client)
     auth_headers = {
@@ -74,6 +110,28 @@ async def test_conversations(
     assert not response.json()["conversations"]
 
     # Begin conversation:
+    api_response = OpenAIAPIResponse(
+        choices=[
+            OpenAIAPIChoices(
+                message=OpenAIAPIMessage(
+                    role="assistant",
+                    function_call=OpenAIAPIFunctionCall(
+                        name="get_answer_for_user_query",
+                        arguments='{\n  "translated_words": [\n    {\n "word": "Hallo",\n      "translated_word": "Hello"\n },\n    {\n      "word": "Wie",\n      "translated_word": "How"\n    },\n    {\n      "word": "Geht",\n "translated_word": "is going"\n    },\n    {\n "word": "s",\n "translated_word": "it"\n }\n  ],\n  "mistakes": [],\n "conversation_response": "Mir geht es gut, danke. Wie kann ich Ihnen helfen?"\n}',  # noqa: E501
+                    ),
+                ),
+            ),
+        ],
+        usage={
+            "prompt_tokens": 181,
+            "completion_tokens": 114,
+            "total_tokens": 295,
+        },
+    )
+    mocker.patch(
+        "fia_api.web.api.teacher.utils.get_openai_response",
+        return_value=api_response,
+    )
     response = await client.post(
         converse_url,
         headers=auth_headers,

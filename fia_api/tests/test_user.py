@@ -13,7 +13,7 @@ async def test_create_login_delete_user(
     client: AsyncClient,
 ) -> None:
     """
-    Tests that create and delete user routes works.
+    Tests that create, login, and delete user routes works.
 
     :param fastapi_app: current application.
     :param client: client for the app.
@@ -25,6 +25,7 @@ async def test_create_login_delete_user(
     username = str(uuid.uuid4())
     password = str(uuid.uuid4())
 
+    # Create User:
     response = await client.post(
         create_url,
         json={
@@ -42,6 +43,7 @@ async def test_create_login_delete_user(
     user_details = await created_user[0].user_details.get()
     assert user_details.times_logged_in == 0
 
+    # Delete user with no auth fails:
     response = await client.post(
         delete_url,
         json={
@@ -50,6 +52,7 @@ async def test_create_login_delete_user(
     )
     assert response.status_code == 401
 
+    # Login succeeds:
     response = await client.post(
         login_url,
         data={
@@ -63,6 +66,20 @@ async def test_create_login_delete_user(
     assert response.status_code == 200
     access_token = response.json()["access_token"]
 
+    # Login with bad auth fails:
+    response = await client.post(
+        login_url,
+        data={
+            "username": username,
+            "password": f"{password}aaa",
+        },
+        headers={
+            "content-type": "application/x-www-form-urlencoded",
+        },
+    )
+    assert response.status_code != 200
+
+    # Delete with auth succeeds:
     response = await client.post(
         delete_url,
         headers={

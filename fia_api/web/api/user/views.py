@@ -3,23 +3,22 @@ import uuid
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 
-from fia_api.db.models.conversation_model import ConversationElementModel
 from fia_api.db.models.user_conversation_model import UserConversationModel
 from fia_api.db.models.user_details_model import UserDetailsModel
 from fia_api.db.models.user_model import UserModel
 from fia_api.web.api.user.schema import (
     AuthenticatedUser,
-    ConversationLine,
+    ConversationResponse,
     ConversationSnippet,
     CreateUserRequest,
     TokenSchema,
     UserConversationList,
-    UserConversationResponse,
     UserDetails,
 )
 from fia_api.web.api.user.utils import (
     create_access_token,
     create_refresh_token,
+    format_conversation_for_response,
     get_current_user,
     get_hashed_password,
     verify_password,
@@ -123,7 +122,7 @@ async def get_user_details(
     summary="Get previous conversations of a user",
     response_model=UserConversationList,
 )
-async def get_user_conversations_list(
+async def list_user_conversations(
     user: AuthenticatedUser = Depends(get_current_user),
 ) -> UserConversationList:
     """
@@ -148,18 +147,18 @@ async def get_user_conversations_list(
 @router.get(
     "/get-conversation",
     summary="Get previous conversation of a user",
-    response_model=UserConversationResponse,
+    response_model=ConversationResponse,
 )
-async def get_user_conversations(
+async def get_user_conversation(
     conversation_id: str,
     user: AuthenticatedUser = Depends(get_current_user),
-) -> UserConversationResponse:
+) -> ConversationResponse:
     """
     Returns the details of a conversation specified by conversation_id.
 
     :param conversation_id: String conversation_id
     :param user: AuthenticatedUser
-    :returns: UserConversationResponse
+    :returns: ConversationResponse
     :raises HTTPException: When they don't have permission to see conversation.
     """
     user_model = await UserModel.get(username=user.username)
@@ -173,18 +172,4 @@ async def get_user_conversations(
             detail="Don't have permission to access that conversation.",
         )
 
-    # TODO: This is duplicated code. This should be formalized into a more
-    # sensible object.
-    raw_conversation = await ConversationElementModel.filter(
-        conversation_id=uuid.UUID(conversation_id),
-    ).values()
-
-    return UserConversationResponse(
-        conversation=[
-            ConversationLine(
-                role=conversation_element["role"].value,
-                content=conversation_element["content"],
-            )
-            for conversation_element in raw_conversation
-        ],
-    )
+    return await format_conversation_for_response(conversation_id)

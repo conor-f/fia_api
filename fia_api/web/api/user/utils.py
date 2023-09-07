@@ -1,5 +1,7 @@
+import json
+import uuid
 from datetime import datetime, timedelta
-from typing import Any, Union
+from typing import Any, Dict, Union
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -8,9 +10,21 @@ from loguru import logger
 from passlib.context import CryptContext
 from pydantic import ValidationError
 
+from fia_api.db.models.conversation_model import (
+    ConversationElementModel,
+    ConversationElementRole,
+)
 from fia_api.db.models.user_model import UserModel
 from fia_api.settings import settings
-from fia_api.web.api.user.schema import AuthenticatedUser, TokenPayload
+from fia_api.web.api.teacher.schema import TeacherResponse
+from fia_api.web.api.user.schema import (
+    AuthenticatedUser,
+    ConversationElement,
+    ConversationResponse,
+    TeacherConversationElement,
+    TokenPayload,
+    UserConversationElement,
+)
 
 ACCESS_TOKEN_EXPIRY_MINUTES = 30
 REFRESH_TOKEN_EXPIRY_MINUTES = 60 * 24 * 7
@@ -116,3 +130,63 @@ async def get_current_user(token: str = Depends(reuseable_oauth)) -> Authenticat
         )
 
     return AuthenticatedUser(username=user.username)
+
+
+async def format_conversation_element(
+    conversation_element: Dict[str, str],
+) -> Union[TeacherConversationElement, UserConversationElement]:
+    """
+    Return the correct object.
+
+    :param conversation_element: A dict of the current conversation element.
+    :returns: A sensible representation of the conversation element.
+    """
+    # Ignoring type here as MyPy doesn't co-operate with Tortoise ORM for enums.
+    if conversation_element["role"] == ConversationElementRole.SYSTEM:  # type: ignore
+        return TeacherConversationElement(
+            response=TeacherResponse(
+                **json.loads(conversation_element["content"]),
+            ),
+        )
+
+    return UserConversationElement(message=conversation_element["content"])
+
+
+async def format_conversation_for_response(
+    conversation_id: str,
+    last: bool = False,
+) -> ConversationResponse:
+    """
+    Returns the ConversationRespone from a conversation_id string.
+
+    :param conversation_id: String conversation_id.
+    :param last: Boolean optional if True only return the most recent element instead
+                    of the whole conversation.
+    :returns: ConversationResponse
+    """
+    raw_conversation = await ConversationElementModel.filter(
+        conversation_id=uuid.UUID(conversation_id),
+    ).values()
+
+    if last:
+        raw_conversation = [raw_conversation[-1]]
+
+    conversation_list = []
+    for conversation_element in raw_conversation:
+        try:
+            conversation_list.append(
+                ConversationElement(
+                    conversation_element=await format_conversation_element(
+                        conversation_element,
+                    ),
+                ),
+            )
+        except Exception as ex:
+            # TODO: This is expected in the case of the initial assistant
+            # message.
+            logger.debug(ex)
+
+    return ConversationResponse(
+        conversation_id=conversation_id,
+        conversation=conversation_list,
+    )

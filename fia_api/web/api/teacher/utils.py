@@ -117,7 +117,7 @@ async def initialize_conversation(
     await ConversationElementModel.create(
         conversation_id=conversation_id,
         role=ConversationElementRole.SYSTEM,
-        content=settings.prompts["p3"],
+        content=settings.prompts["p2"],
     )
 
     await UserConversationModel.create(

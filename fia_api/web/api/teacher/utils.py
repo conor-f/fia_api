@@ -14,8 +14,7 @@ from fia_api.db.models.token_usage_model import TokenUsageModel
 from fia_api.db.models.user_conversation_model import UserConversationModel
 from fia_api.db.models.user_model import UserModel
 from fia_api.settings import settings
-from fia_api.web.api.teacher.schema import TeacherResponse
-from fia_api.web.api.user.schema import ConversationResponse
+from fia_api.web.api.teacher.schema import ConversationResponse, TeacherResponse
 from fia_api.web.api.user.utils import format_conversation_for_response
 
 openai.api_key = settings.openai_api_key

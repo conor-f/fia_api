@@ -16,15 +16,14 @@ from fia_api.db.models.conversation_model import (
 )
 from fia_api.db.models.user_model import UserModel
 from fia_api.settings import settings
-from fia_api.web.api.teacher.schema import TeacherResponse
-from fia_api.web.api.user.schema import (
-    AuthenticatedUser,
+from fia_api.web.api.teacher.schema import (
     ConversationElement,
     ConversationResponse,
     TeacherConversationElement,
-    TokenPayload,
+    TeacherResponse,
     UserConversationElement,
 )
+from fia_api.web.api.user.schema import AuthenticatedUser, TokenPayload
 
 ACCESS_TOKEN_EXPIRY_MINUTES = 30
 REFRESH_TOKEN_EXPIRY_MINUTES = 60 * 24 * 7

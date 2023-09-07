@@ -6,13 +6,15 @@ from fastapi.security import OAuth2PasswordRequestForm
 from fia_api.db.models.user_conversation_model import UserConversationModel
 from fia_api.db.models.user_details_model import UserDetailsModel
 from fia_api.db.models.user_model import UserModel
-from fia_api.web.api.user.schema import (
-    AuthenticatedUser,
+from fia_api.web.api.teacher.schema import (
     ConversationResponse,
     ConversationSnippet,
+    UserConversationList,
+)
+from fia_api.web.api.user.schema import (
+    AuthenticatedUser,
     CreateUserRequest,
     TokenSchema,
-    UserConversationList,
     UserDetails,
 )
 from fia_api.web.api.user.utils import (

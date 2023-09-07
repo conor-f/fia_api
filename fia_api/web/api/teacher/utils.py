@@ -4,6 +4,7 @@ import uuid
 from typing import Dict, List
 
 import openai
+from loguru import logger
 
 from fia_api.db.models.conversation_model import (
     ConversationElementModel,
@@ -42,6 +43,28 @@ async def get_messages_from_conversation_id(
     ]
 
 
+# Ignoring type as I don't really know what the OpenAI API returns...
+async def get_openai_response(conversation_id: str):  # type: ignore
+    """
+    Wraps the OpenAI API call. Mostly to make mocking easier.
+
+    :param conversation_id: String conversation_id
+    :return: OpenAI Chat Response object
+    """
+    return openai.ChatCompletion.create(
+        model="gpt-3.5-turbo-0613",
+        messages=await get_messages_from_conversation_id(conversation_id),
+        functions=[
+            {
+                "name": "get_answer_for_user_query",
+                "description": "Get user language learning mistakes and a sentence to continue the conversation",  # noqa: E501
+                "parameters": TeacherResponse.schema(),
+            },
+        ],
+        function_call={"name": "get_answer_for_user_query"},
+    )
+
+
 async def get_response(conversation_id: str, message: str) -> ConversationResponse:
     """
     Converse with OpenAI.
@@ -59,18 +82,10 @@ async def get_response(conversation_id: str, message: str) -> ConversationRespon
         content=message,
     )
 
-    chat_response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo-0613",
-        messages=await get_messages_from_conversation_id(conversation_id),
-        functions=[
-            {
-                "name": "get_answer_for_user_query",
-                "description": "Get user language learning mistakes and a sentence to continue the conversation",  # noqa: E501
-                "parameters": TeacherResponse.schema(),
-            },
-        ],
-        function_call={"name": "get_answer_for_user_query"},
-    )
+    chat_response = await get_openai_response(conversation_id)
+    logger.warning("-------------------------")
+    logger.warning(chat_response)
+    logger.warning("-------------------------")
 
     # Do this JSON dance to have it serialize correctly.
     teacher_response = json.dumps(

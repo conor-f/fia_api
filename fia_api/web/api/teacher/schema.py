@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import List, Union, Optional
 
 from pydantic import BaseModel, Field
 
@@ -49,9 +49,8 @@ class ConversationContinuation(BaseModel):
 class TeacherResponse(BaseModel):
     """Represents the entire response from the "Teacher"."""
 
-    translated_words: List[TranslatedWords]
-    mistakes: List[Mistake]
-    conversation_response: str
+    learning_moments: LearningMoments
+    conversation_response: ConversationContinuation
 
 
 class TeacherConverseRequest(BaseModel):
@@ -75,31 +74,12 @@ class UserConversationList(BaseModel):
     conversations: List[ConversationSnippet]
 
 
-class ConversationLine(BaseModel):
-    """A single line of a conversation."""
-
-    # If str, then this is just a user response.
-    line: Union[TeacherResponse, str]
-
-
-class UserConversationElement(BaseModel):
-    """The user part of the conversation."""
-
-    role: str = "user"
-    message: str
-
-
-class TeacherConversationElement(BaseModel):
-    """The teacher response."""
-
-    role: str = "teacher"
-    response: TeacherResponse
-
-
 class ConversationElement(BaseModel):
     """A single part of a conversation. Either from the user or system."""
 
-    conversation_element: Union[TeacherConversationElement, UserConversationElement]
+    role: str
+    message: str
+    learning_moments: Optional[LearningMoments] = None
 
 
 class ConversationResponse(BaseModel):

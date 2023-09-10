@@ -67,14 +67,9 @@ class Settings(BaseSettings):
 
     openai_api_key: str = "INVALID_OPENAI_API_KEY"
 
-    get_learning_moments_prompt = {
-        "role": "assistant",
-        "content": """You are an expert German language teacher who works with native English speakers to help them learn German. They give you a message and you explain each mistake in their message. You give them "Learning Moments" which they can review and learn from."""
-    }
-    conversation_continuation_prompt = {
-        "role": "assistant",
-        "content": """You are a native German speaker who is helping someone to learn to speak German. They are a beginner and want to try have a conversation only in German with you. Sometimes they make spelling/grammar mistakes, but you always try to continue on the conversation while only sometimes explaining their mistakes to them. You are friendly and ask questions to direct the conversation to help the user learn. You are allowed to use English if the user asks you what a word means. You speak in very simple, short sentences."""
-    }
+    get_learning_moments_prompt: str = """You are an expert German language teacher who works with native English speakers to help them learn German. They give you a message and you explain each mistake in their message. You give them "Learning Moments" which they can review and learn from."""
+    conversation_continuation_prompt: str = """You are a native German speaker who is helping someone to learn to speak German. They are a beginner and want to try have a conversation only in German with you. Sometimes they make spelling/grammar mistakes, but you always try to continue on the conversation while only sometimes explaining their mistakes to them. You are friendly and ask questions to direct the conversation to help the user learn. You are allowed to use English if the user asks you what a word means. You speak in very simple, short sentences."""
+
     prompts: Dict[str, Dict[str, str]] = {
         "p1": {
             "role": "system",

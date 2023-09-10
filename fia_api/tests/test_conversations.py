@@ -128,10 +128,11 @@ async def test_conversations(
             "total_tokens": 295,
         },
     )
-    mocker.patch(
-        "fia_api.web.api.teacher.utils.get_openai_response",
-        return_value=api_response,
-    )
+    if False:
+        mocker.patch(
+            "fia_api.web.api.teacher.utils.get_openai_response",
+            return_value=api_response,
+        )
     response = await client.post(
         converse_url,
         headers=auth_headers,
@@ -141,6 +142,8 @@ async def test_conversations(
         },
     )
 
+    print(response)
+    print(response.json())
     conversation_id = response.json()["conversation_id"]
     conversation = response.json()["conversation"]
 

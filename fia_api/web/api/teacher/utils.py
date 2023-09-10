@@ -1,7 +1,7 @@
 # noqa: WPS462
 import json
 import uuid
-from typing import Dict, List
+from typing import Dict, List, Any
 
 import openai
 from loguru import logger
@@ -23,6 +23,23 @@ from fia_api.web.api.teacher.schema import (
 from fia_api.web.api.user.utils import format_conversation_for_response
 
 openai.api_key = settings.openai_api_key
+
+
+async def store_token_usage(conversation_id: str, openai_response: Dict[Any, Any]):
+    """
+    Store the token usage for an OpenAI request.
+
+    :param conversation_id: String to store the usage under
+    :param openai_response: The messy openAI datatype
+    """
+    token_usage_model = await TokenUsageModel.get(
+        conversation_id=uuid.UUID(conversation_id),
+    )
+
+    token_usage_model.prompt_token_usage += openai_response.usage["prompt_tokens"]
+    token_usage_model.completion_token_usage += openai_response.usage["completion_tokens"]
+
+    await token_usage_model.save()
 
 
 async def get_messages_from_conversation_id(
@@ -59,7 +76,10 @@ async def get_learning_moments_from_message(message: str, conversation_id: str) 
     openai_response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo-0613",
         messages=[
-            settings.get_learning_moments_prompt,
+            {
+                "role": "assistant",
+                "content": settings.get_learning_moments_prompt,
+            },
             {
                 "role": "user",
                 "content": message
@@ -77,7 +97,9 @@ async def get_learning_moments_from_message(message: str, conversation_id: str) 
 
     await store_token_usage(conversation_id, openai_response)
 
-    return openai_response
+    return LearningMoments(
+        **json.loads(openai_response.choices[0].message.function_call.arguments)
+    )
 
 
 async def get_conversation_continuation(conversation_id: str) -> ConversationContinuation:
@@ -103,32 +125,11 @@ async def get_conversation_continuation(conversation_id: str) -> ConversationCon
         function_call={"name": "get_conversation_response"},
     )
 
-    teacher_response = json.dumps(
-        json.loads(
-            chat_response.choices[0].message.function_call.arguments,  # noqa: WPS219
-        ),
-    )
-
     await store_token_usage(conversation_id, openai_response)
 
-    return openai_response
-
-
-async def store_token_usage(conversation_id: str, openai_response: Dict[Any, Any]):
-    """
-    Store the token usage for an OpenAI request.
-
-    :param conversation_id: String to store the usage under
-    :param openai_response: The messy openAI datatype
-    """
-    token_usage_model = await TokenUsageModel.get(
-        conversation_id=uuid.UUID(conversation_id),
+    return ConversationContinuation(
+        **json.loads(openai_response.choices[0].message.function_call.arguments)
     )
-
-    token_usage_model.prompt_token_usage += openai_response.usage["prompt_tokens"]
-    token_usage_model.completion_token_usage += openai_response.usage["completion_tokens"]
-
-    await token_usage_model.save()
 
 
 async def get_response(conversation_id: str, message: str) -> ConversationResponse:
@@ -148,23 +149,17 @@ async def get_response(conversation_id: str, message: str) -> ConversationRespon
         content=message,
     )
 
-    learning_moments = await get_learning_moments_from_message(message)
-    conversation_continuation = await get_conversation_continuation(conversation_id)
-    logger.warning("-------------------------")
-    logger.warning(chat_response)
-    logger.warning("-------------------------")
-
-    # Do this JSON dance to have it serialize correctly.
-    teacher_response = json.dumps(
-        json.loads(
-            chat_response.choices[0].message.function_call.arguments,  # noqa: WPS219
-        ),
+    learning_moments = await get_learning_moments_from_message(
+        message,
+        conversation_id,
     )
+    conversation_continuation = await get_conversation_continuation(conversation_id)
 
+    # TODO: Store the learning moments.
     await ConversationElementModel.create(
         conversation_id=uuid.UUID(conversation_id),
         role=ConversationElementRole.SYSTEM,
-        content=teacher_response,
+        content=conversation_continuation.message,
     )
 
     return await format_conversation_for_response(

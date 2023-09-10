@@ -19,9 +19,7 @@ from fia_api.settings import settings
 from fia_api.web.api.teacher.schema import (
     ConversationElement,
     ConversationResponse,
-    TeacherConversationElement,
     TeacherResponse,
-    UserConversationElement,
 )
 from fia_api.web.api.user.schema import AuthenticatedUser, TokenPayload
 
@@ -131,26 +129,6 @@ async def get_current_user(token: str = Depends(reuseable_oauth)) -> Authenticat
     return AuthenticatedUser(username=user.username)
 
 
-async def format_conversation_element(
-    conversation_element: Dict[str, str],
-) -> Union[TeacherConversationElement, UserConversationElement]:
-    """
-    Return the correct object.
-
-    :param conversation_element: A dict of the current conversation element.
-    :returns: A sensible representation of the conversation element.
-    """
-    # Ignoring type here as MyPy doesn't co-operate with Tortoise ORM for enums.
-    if conversation_element["role"] == ConversationElementRole.SYSTEM:  # type: ignore
-        return TeacherConversationElement(
-            response=TeacherResponse(
-                **json.loads(conversation_element["content"]),
-            ),
-        )
-
-    return UserConversationElement(message=conversation_element["content"])
-
-
 async def format_conversation_for_response(
     conversation_id: str,
     last: bool = False,
@@ -167,23 +145,23 @@ async def format_conversation_for_response(
         conversation_id=uuid.UUID(conversation_id),
     ).values()
 
+    print(1)
+    print(raw_conversation)
+
     if last:
         raw_conversation = [raw_conversation[-1]]
+
+    print(2)
+    print(raw_conversation)
 
     conversation_list = []
     for conversation_element in raw_conversation:
         try:
-            conversation_list.append(
-                ConversationElement(
-                    conversation_element=await format_conversation_element(
-                        conversation_element,
-                    ),
-                ),
-            )
+            conversation_list.append(ConversationElement(**conversation_element)),
         except Exception as ex:
             # TODO: This is expected in the case of the initial assistant
             # message.
-            logger.debug(ex)
+            logger.warning(ex)
 
     return ConversationResponse(
         conversation_id=conversation_id,

@@ -30,4 +30,5 @@ async def converse(
     return await get_response(
         converse_request.conversation_id,
         converse_request.message,
+        await UserModel.get(username=user.username),
     )

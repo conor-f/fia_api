@@ -14,10 +14,13 @@ from fia_api.db.models.token_usage_model import TokenUsageModel
 from fia_api.db.models.user_conversation_model import UserConversationModel
 from fia_api.db.models.user_model import UserModel
 from fia_api.settings import settings
+from fia_api.web.api.flashcards.utils import create_flashcard
 from fia_api.web.api.teacher.schema import (
     ConversationContinuation,
     ConverseResponse,
     LearningMoments,
+    Mistake,
+    Translation,
 )
 
 openai.api_key = settings.openai_api_key
@@ -143,7 +146,46 @@ async def get_conversation_continuation(
     )
 
 
-async def get_response(conversation_id: str, message: str) -> ConverseResponse:
+async def create_flashcards_from_learning_moments(
+    learning_moments: LearningMoments,
+    user: UserModel,
+    conversation_id: str,
+) -> None:
+    """
+    Store each learning moment as a flashcard.
+
+    :param learning_moments: LearningMoments to store as flashcards.
+    :param user: UserModel to associate with the flashcards.
+    :param conversation_id: String conversation ID for context.
+    """
+    for learning_moment in learning_moments:
+        if isinstance(learning_moment, Mistake):
+            await create_flashcard(
+                user.username,
+                learning_moment.incorrect_section,
+                learning_moment.corrected_section
+                + "\n\n"
+                + learning_moment.explanation,
+                conversation_id,
+            )
+        elif isinstance(learning_moment, Translation):
+            await create_flashcard(
+                user.username,
+                learning_moment.phrase,
+                learning_moment.translated_phrase,
+                conversation_id,
+                both_sides=True,
+            )
+        else:
+            logger.error("Some weirdness going on....")
+            logger.error(learning_moment)
+
+
+async def get_response(
+    conversation_id: str,
+    message: str,
+    user: UserModel,
+) -> ConverseResponse:
     """
     Converse with OpenAI.
 
@@ -152,6 +194,7 @@ async def get_response(conversation_id: str, message: str) -> ConverseResponse:
 
     :param conversation_id: String ID representing the conversation.
     :param message: String message the user wants to send.
+    :param user: UserModel, needed to store flashcards.
     :return: ConverseResponse
     """
     await ConversationElementModel.create(
@@ -162,6 +205,11 @@ async def get_response(conversation_id: str, message: str) -> ConverseResponse:
 
     learning_moments = await get_learning_moments_from_message(
         message,
+        conversation_id,
+    )
+    await create_flashcards_from_learning_moments(
+        learning_moments,
+        user,
         conversation_id,
     )
     conversation_continuation = await get_conversation_continuation(conversation_id)
@@ -211,4 +259,4 @@ async def initialize_conversation(
 
     await TokenUsageModel.create(conversation_id=conversation_id)
 
-    return await get_response(str(conversation_id), message)
+    return await get_response(str(conversation_id), message, user)

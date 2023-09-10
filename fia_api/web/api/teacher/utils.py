@@ -14,10 +14,74 @@ from fia_api.db.models.token_usage_model import TokenUsageModel
 from fia_api.db.models.user_conversation_model import UserConversationModel
 from fia_api.db.models.user_model import UserModel
 from fia_api.settings import settings
-from fia_api.web.api.teacher.schema import ConversationResponse, TeacherResponse
+from fia_api.web.api.teacher.schema import (
+    ConversationResponse,
+    ConversationContinuation,
+    TeacherResponse,
+    LearningMoments,
+)
 from fia_api.web.api.user.utils import format_conversation_for_response
 
 openai.api_key = settings.openai_api_key
+
+
+async def get_learning_moments_from_message(message: str) -> LearningMoments:
+    """
+    Given a user message, return a LearningMoments object that can be used to
+    create flashcards etc.
+
+    :param message: String message from the user to look for mistakes in.
+    :returns: LearningMoments
+    """
+    openai_response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo-0613",
+        messages=[
+            settings.get_learning_moments_prompt,
+            {
+                "role": "user",
+                "content": message
+            },
+        ],
+        functions=[
+            {
+                "name": "get_learning_moments",
+                "description": "List all of the mistakes in the user's message and any words in the user message that they would like translated.",
+                "parameters": LearningMoments.schema(),
+            },
+        ],
+        function_call={"name": "get_learning_moments"},
+    )
+
+    return openai_response
+
+
+async def get_conversation_continuation(conversation_id: str) -> ConversationContinuation:
+    """
+    Continue the conversation with the user based on the context.
+
+    The conversation in the DB must be updated with the most recent user
+    message.
+
+    :param conversation_id: String conversation to continue on.
+    :returns: ConversationContinuation
+    """
+    messages = [settings.conversation_continuation_prompt]
+    messages.append(await get_messages_from_conversation_id(conversation_id))
+
+    openai_response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo-0613",
+        messages=messages,
+        functions=[
+            {
+                "name": "get_conversation_response",
+                "description": "Get the conversational response to the user's message.",
+                "parameters": ConversationContinuation.schema(),
+            },
+        ],
+        function_call={"name": "get_conversation_response"},
+    )
+
+    return openai_response
 
 
 async def get_messages_from_conversation_id(

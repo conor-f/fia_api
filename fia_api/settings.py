@@ -67,6 +67,10 @@ class Settings(BaseSettings):
 
     openai_api_key: str = "INVALID_OPENAI_API_KEY"
 
+    get_learning_moments_prompt = {
+        "role": "assistant",
+        "content": """You are an expert German language teacher who works with native English speakers to help them learn German. They give you a message and you explain each mistake in their message. You give them "Learning Moments" which they can review and learn from."""
+    }
     prompts: Dict[str, Dict[str, str]] = {
         "p1": {
             "role": "system",

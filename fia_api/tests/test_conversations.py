@@ -153,6 +153,7 @@ async def test_conversations(
     list_conversations_url = fastapi_app.url_path_for("list_user_conversations")
     get_conversation_url = fastapi_app.url_path_for("get_user_conversation")
     converse_url = fastapi_app.url_path_for("converse")
+    get_flashcards_url = fastapi_app.url_path_for("get_flashcards")
 
     # No conversations by default:
     response = await client.get(
@@ -160,6 +161,13 @@ async def test_conversations(
         headers=auth_headers,
     )
     assert not response.json()["conversations"]
+
+    # No flashcards by default:
+    response = await client.get(
+        get_flashcards_url,
+        headers=auth_headers,
+    )
+    assert not response.json()["flashcards"]
 
     # Begin conversation:
     mocker.patch(
@@ -216,3 +224,10 @@ async def test_conversations(
     )
     logger.error(response.json())
     assert len(response.json()["conversation"]) == 4
+
+    # Now we have flashcards
+    response = await client.get(
+        get_flashcards_url,
+        headers=auth_headers,
+    )
+    assert len(response.json()["flashcards"]) == 4

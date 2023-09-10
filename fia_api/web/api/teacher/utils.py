@@ -158,21 +158,23 @@ async def create_flashcards_from_learning_moments(
     :param user: UserModel to associate with the flashcards.
     :param conversation_id: String conversation ID for context.
     """
-    for learning_moment in learning_moments:
-        if isinstance(learning_moment, Mistake):
+    for learning_moment in learning_moments.learning_moments:
+        parsed_learning_moment = learning_moment.moment
+
+        if isinstance(parsed_learning_moment, Mistake):
             await create_flashcard(
                 user.username,
-                learning_moment.incorrect_section,
-                learning_moment.corrected_section
+                parsed_learning_moment.incorrect_section,
+                parsed_learning_moment.corrected_section
                 + "\n\n"
-                + learning_moment.explanation,
+                + parsed_learning_moment.explanation,
                 conversation_id,
             )
-        elif isinstance(learning_moment, Translation):
+        elif isinstance(parsed_learning_moment, Translation):
             await create_flashcard(
                 user.username,
-                learning_moment.phrase,
-                learning_moment.translated_phrase,
+                parsed_learning_moment.phrase,
+                parsed_learning_moment.translated_phrase,
                 conversation_id,
                 both_sides=True,
             )

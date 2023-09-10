@@ -129,6 +129,20 @@ async def get_current_user(token: str = Depends(reuseable_oauth)) -> Authenticat
     return AuthenticatedUser(username=user.username)
 
 
+async def format_conversation_element(conversation_element: Dict[Any, Any]) -> ConversationElement:
+    """
+    """
+    parsed_element = {
+        "role": conversation_element["role"].value,
+        "message": conversation_element["content"],
+    }
+
+    if "learning_moments" in conversation_element:
+        parsed_element["learning_moments"] = conversation_element["learning_moments"]
+
+    return ConversationElement(**parsed_element)
+
+
 async def format_conversation_for_response(
     conversation_id: str,
     last: bool = False,
@@ -143,25 +157,18 @@ async def format_conversation_for_response(
     """
     raw_conversation = await ConversationElementModel.filter(
         conversation_id=uuid.UUID(conversation_id),
+    ).exclude(
+        role=ConversationElementRole.ASSISTANT,
     ).values()
-
-    print(1)
-    print(raw_conversation)
 
     if last:
         raw_conversation = [raw_conversation[-1]]
 
-    print(2)
-    print(raw_conversation)
-
     conversation_list = []
     for conversation_element in raw_conversation:
-        try:
-            conversation_list.append(ConversationElement(**conversation_element)),
-        except Exception as ex:
-            # TODO: This is expected in the case of the initial assistant
-            # message.
-            logger.warning(ex)
+        conversation_list.append(
+            await format_conversation_element(conversation_element),
+        )
 
     return ConversationResponse(
         conversation_id=conversation_id,

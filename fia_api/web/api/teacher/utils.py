@@ -186,7 +186,7 @@ async def initialize_conversation(
 
     await ConversationElementModel.create(
         conversation_id=conversation_id,
-        role=ConversationElementRole.SYSTEM,
+        role=ConversationElementRole.ASSISTANT,
         content=settings.conversation_continuation_prompt,
     )
 

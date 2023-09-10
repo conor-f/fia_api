@@ -1,4 +1,3 @@
-import json
 import uuid
 from datetime import datetime, timedelta
 from typing import Any, Dict, Union
@@ -16,11 +15,7 @@ from fia_api.db.models.conversation_model import (
 )
 from fia_api.db.models.user_model import UserModel
 from fia_api.settings import settings
-from fia_api.web.api.teacher.schema import (
-    ConversationElement,
-    ConversationResponse,
-    TeacherResponse,
-)
+from fia_api.web.api.teacher.schema import ConversationElement, ConversationResponse
 from fia_api.web.api.user.schema import AuthenticatedUser, TokenPayload
 
 ACCESS_TOKEN_EXPIRY_MINUTES = 30
@@ -129,8 +124,14 @@ async def get_current_user(token: str = Depends(reuseable_oauth)) -> Authenticat
     return AuthenticatedUser(username=user.username)
 
 
-async def format_conversation_element(conversation_element: Dict[Any, Any]) -> ConversationElement:
+async def format_conversation_element(
+    conversation_element: Dict[Any, Any],
+) -> ConversationElement:
     """
+    Formats a conversation element like dict into an actual object.
+
+    :param conversation_element: dict of mostly str -> str
+    :return: ConversationElement
     """
     parsed_element = {
         "role": conversation_element["role"].value,
@@ -138,7 +139,10 @@ async def format_conversation_element(conversation_element: Dict[Any, Any]) -> C
     }
 
     if "learning_moments" in conversation_element:
-        parsed_element["learning_moments"] = conversation_element["learning_moments"]
+        parsed_element["learning_moments"] = conversation_element.get(
+            "learning_moments",
+            None,
+        )
 
     return ConversationElement(**parsed_element)
 
@@ -155,11 +159,15 @@ async def format_conversation_for_response(
                     of the whole conversation.
     :returns: ConversationResponse
     """
-    raw_conversation = await ConversationElementModel.filter(
-        conversation_id=uuid.UUID(conversation_id),
-    ).exclude(
-        role=ConversationElementRole.ASSISTANT,
-    ).values()
+    raw_conversation = (
+        await ConversationElementModel.filter(
+            conversation_id=uuid.UUID(conversation_id),
+        )
+        .exclude(
+            role=ConversationElementRole.ASSISTANT,
+        )
+        .values()
+    )
 
     if last:
         raw_conversation = [raw_conversation[-1]]

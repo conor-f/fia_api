@@ -1,7 +1,7 @@
 # noqa: WPS462
 import json
 import uuid
-from typing import Dict, List, Any
+from typing import Any, Dict, List
 
 import openai
 from loguru import logger
@@ -15,9 +15,8 @@ from fia_api.db.models.user_conversation_model import UserConversationModel
 from fia_api.db.models.user_model import UserModel
 from fia_api.settings import settings
 from fia_api.web.api.teacher.schema import (
-    ConversationResponse,
     ConversationContinuation,
-    TeacherResponse,
+    ConversationResponse,
     LearningMoments,
 )
 from fia_api.web.api.user.utils import format_conversation_for_response
@@ -25,7 +24,10 @@ from fia_api.web.api.user.utils import format_conversation_for_response
 openai.api_key = settings.openai_api_key
 
 
-async def store_token_usage(conversation_id: str, openai_response: Dict[Any, Any]):
+async def store_token_usage(
+    conversation_id: str,
+    openai_response: Any,
+) -> None:  # type: ignore
     """
     Store the token usage for an OpenAI request.
 
@@ -37,7 +39,9 @@ async def store_token_usage(conversation_id: str, openai_response: Dict[Any, Any
     )
 
     token_usage_model.prompt_token_usage += openai_response.usage["prompt_tokens"]
-    token_usage_model.completion_token_usage += openai_response.usage["completion_tokens"]
+    token_usage_model.completion_token_usage += openai_response.usage[
+        "completion_tokens"
+    ]
 
     await token_usage_model.save()
 
@@ -64,10 +68,12 @@ async def get_messages_from_conversation_id(
     ]
 
 
-async def get_learning_moments_from_message(message: str, conversation_id: str) -> LearningMoments:
+async def get_learning_moments_from_message(
+    message: str,
+    conversation_id: str,
+) -> LearningMoments:
     """
-    Given a user message, return a LearningMoments object that can be used to
-    create flashcards etc.
+    Get LearningMoments from a user message.
 
     :param message: String message from the user to look for mistakes in.
     :param conversation_id: Store the token usage in the conversation.
@@ -82,13 +88,13 @@ async def get_learning_moments_from_message(message: str, conversation_id: str) 
             },
             {
                 "role": "user",
-                "content": message
+                "content": message,
             },
         ],
         functions=[
             {
                 "name": "get_learning_moments",
-                "description": "List all of the mistakes in the user's message and any words in the user message that they would like translated.",
+                "description": "List all of the mistakes in the user's message and any words in the user message that they would like translated.",  # noqa: E501
                 "parameters": LearningMoments.schema(),
             },
         ],
@@ -98,11 +104,15 @@ async def get_learning_moments_from_message(message: str, conversation_id: str) 
     await store_token_usage(conversation_id, openai_response)
 
     return LearningMoments(
-        **json.loads(openai_response.choices[0].message.function_call.arguments)
+        **json.loads(
+            openai_response.choices[0].message.function_call.arguments,  # noqa: WPS219
+        ),
     )
 
 
-async def get_conversation_continuation(conversation_id: str) -> ConversationContinuation:
+async def get_conversation_continuation(
+    conversation_id: str,
+) -> ConversationContinuation:
     """
     Continue the conversation with the user based on the context.
 
@@ -128,7 +138,9 @@ async def get_conversation_continuation(conversation_id: str) -> ConversationCon
     await store_token_usage(conversation_id, openai_response)
 
     return ConversationContinuation(
-        **json.loads(openai_response.choices[0].message.function_call.arguments)
+        **json.loads(
+            openai_response.choices[0].message.function_call.arguments,  # noqa: WPS219
+        ),
     )
 
 
@@ -156,6 +168,8 @@ async def get_response(conversation_id: str, message: str) -> ConversationRespon
     conversation_continuation = await get_conversation_continuation(conversation_id)
 
     # TODO: Store the learning moments.
+    logger.info(learning_moments)
+
     await ConversationElementModel.create(
         conversation_id=uuid.UUID(conversation_id),
         role=ConversationElementRole.SYSTEM,

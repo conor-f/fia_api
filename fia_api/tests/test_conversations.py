@@ -1,11 +1,11 @@
 import uuid
-from loguru import logger
 from dataclasses import dataclass
 from typing import Dict, List
 
 import pytest
 from fastapi import FastAPI
 from httpx import AsyncClient
+from loguru import logger
 from pytest_mock import MockerFixture
 
 
@@ -38,6 +38,57 @@ class OpenAIAPIResponse:
 
     choices: List[OpenAIAPIChoices]
     usage: Dict[str, int]
+
+
+def get_mocked_openai_response(*args, **kwargs) -> OpenAIAPIResponse:  # type: ignore
+    """
+    Return the mocked OpenAI API response based on the input.
+
+    :param args: All args passed to OpenAI
+    :param kwargs: All kwargs passed to OpenAI
+    :returns: OpenAIAPIReponse
+    """
+    learning_moments_api_response = OpenAIAPIResponse(
+        choices=[
+            OpenAIAPIChoices(
+                message=OpenAIAPIMessage(
+                    role="assistant",
+                    function_call=OpenAIAPIFunctionCall(
+                        name="get_learning_moments",
+                        arguments='{\n  "learning_moments": [\n    {\n      "moment": {\n        "incorrect_section": "Hallo",\n        "corrected_section": "Hallo,",\n        "explanation": "In German, a comma is often used after greetings like \'Hallo\' or \'Guten Tag\'."\n      }\n    },\n    {\n      "moment": {\n        "incorrect_section": "Wie Geht\'s?",\n        "corrected_section": "Wie geht es dir?",\n        "explanation": "The correct way to ask \'How are you?\' in German is \'Wie geht es dir?\'"\n      }\n    }\n  ]\n}',  # noqa: E501
+                    ),
+                ),
+            ),
+        ],
+        usage={
+            "prompt_tokens": 181,
+            "completion_tokens": 114,
+            "total_tokens": 295,
+        },
+    )
+    chat_continuation_api_response = OpenAIAPIResponse(
+        choices=[
+            OpenAIAPIChoices(
+                message=OpenAIAPIMessage(
+                    role="assistant",
+                    function_call=OpenAIAPIFunctionCall(
+                        name="get_conversation_response",
+                        arguments='{\n"message": "Mir geht es gut, danke!  Wie geht es dir?"\n}',  # noqa: E501
+                    ),
+                ),
+            ),
+        ],
+        usage={
+            "prompt_tokens": 181,
+            "completion_tokens": 114,
+            "total_tokens": 295,
+        },
+    )
+
+    if kwargs["functions"][0]["name"] == "get_learning_moments":
+        return learning_moments_api_response
+
+    return chat_continuation_api_response
 
 
 async def get_access_token(
@@ -110,55 +161,11 @@ async def test_conversations(
     )
     assert not response.json()["conversations"]
 
-    def get_mocked_openai_response(*args, **kwargs):
-        learning_moments_api_response = OpenAIAPIResponse(
-            choices=[
-                OpenAIAPIChoices(
-                    message=OpenAIAPIMessage(
-                        role="assistant",
-                        function_call=OpenAIAPIFunctionCall(
-                            name="get_learning_moments",
-                            arguments="{\n  \"learning_moments\": [\n    {\n      \"moment\": {\n        \"incorrect_section\": \"Hallo\",\n        \"corrected_section\": \"Hallo,\",\n        \"explanation\": \"In German, a comma is often used after greetings like 'Hallo' or 'Guten Tag'.\"\n      }\n    },\n    {\n      \"moment\": {\n        \"incorrect_section\": \"Wie Geht's?\",\n        \"corrected_section\": \"Wie geht es dir?\",\n        \"explanation\": \"The correct way to ask 'How are you?' in German is 'Wie geht es dir?'\"\n      }\n    }\n  ]\n}",  # noqa: E501
-                        ),
-                    ),
-                ),
-            ],
-            usage={
-                "prompt_tokens": 181,
-                "completion_tokens": 114,
-                "total_tokens": 295,
-            },
-        )
-        chat_continuation_api_response = OpenAIAPIResponse(
-            choices=[
-                OpenAIAPIChoices(
-                    message=OpenAIAPIMessage(
-                        role="assistant",
-                        function_call=OpenAIAPIFunctionCall(
-                            name="get_conversation_response",
-                            arguments="{\n\"message\": \"Mir geht es gut, danke!  Wie geht es dir?\"\n}",  # noqa: E501
-                        ),
-                    ),
-                ),
-            ],
-            usage={
-                "prompt_tokens": 181,
-                "completion_tokens": 114,
-                "total_tokens": 295,
-            },
-        )
-
-        if kwargs["functions"][0]["name"] == "get_learning_moments":
-            return learning_moments_api_response
-        else:
-            return chat_continuation_api_response
-
     # Begin conversation:
-    if True:
-        mocker.patch(
-            "fia_api.web.api.teacher.utils.openai.ChatCompletion.create",
-            side_effect=get_mocked_openai_response
-        )
+    mocker.patch(
+        "fia_api.web.api.teacher.utils.openai.ChatCompletion.create",
+        side_effect=get_mocked_openai_response,
+    )
     response = await client.post(
         converse_url,
         headers=auth_headers,
@@ -168,8 +175,6 @@ async def test_conversations(
         },
     )
 
-    print(response)
-    print(response.json())
     conversation_id = response.json()["conversation_id"]
     conversation = response.json()["conversation"]
 

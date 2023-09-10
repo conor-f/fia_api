@@ -16,10 +16,9 @@ from fia_api.db.models.user_model import UserModel
 from fia_api.settings import settings
 from fia_api.web.api.teacher.schema import (
     ConversationContinuation,
-    ConversationResponse,
+    ConverseResponse,
     LearningMoments,
 )
-from fia_api.web.api.user.utils import format_conversation_for_response
 
 openai.api_key = settings.openai_api_key
 
@@ -144,7 +143,7 @@ async def get_conversation_continuation(
     )
 
 
-async def get_response(conversation_id: str, message: str) -> ConversationResponse:
+async def get_response(conversation_id: str, message: str) -> ConverseResponse:
     """
     Converse with OpenAI.
 
@@ -153,7 +152,7 @@ async def get_response(conversation_id: str, message: str) -> ConversationRespon
 
     :param conversation_id: String ID representing the conversation.
     :param message: String message the user wants to send.
-    :return: ConversationResponse
+    :return: ConverseResponse
     """
     await ConversationElementModel.create(
         conversation_id=uuid.UUID(conversation_id),
@@ -176,16 +175,17 @@ async def get_response(conversation_id: str, message: str) -> ConversationRespon
         content=conversation_continuation.message,
     )
 
-    return await format_conversation_for_response(
-        conversation_id,
-        last=True,
+    return ConverseResponse(
+        conversation_id=conversation_id,
+        learning_moments=learning_moments,
+        conversation_response=conversation_continuation.message,
     )
 
 
 async def initialize_conversation(
     user: UserModel,
     message: str,
-) -> ConversationResponse:
+) -> ConverseResponse:
     """
     Starts the conversation.
 

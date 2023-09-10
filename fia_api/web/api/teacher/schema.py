@@ -125,3 +125,11 @@ class ConversationResponse(BaseModel):
 
     conversation_id: str
     conversation: List[ConversationElement]
+
+
+class ConverseResponse(BaseModel):
+    """Response from the Converse endpoint."""
+
+    conversation_id: str
+    learning_moments: LearningMoments
+    conversation_response: str

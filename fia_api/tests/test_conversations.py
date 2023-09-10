@@ -176,11 +176,12 @@ async def test_conversations(
     )
 
     conversation_id = response.json()["conversation_id"]
-    conversation = response.json()["conversation"]
+    conversation_response = response.json()["conversation_response"]
 
     assert conversation_id != "new"
-    assert len(conversation) == 1
-    assert conversation[0]["role"] == "system"
+    assert len(response.json()["learning_moments"]) > 0  # noqa: WPS507
+    assert isinstance(conversation_response, str)
+    assert len(conversation_response) > 0  # noqa: WPS507
 
     # Now one conversation
     response = await client.get(
@@ -201,8 +202,9 @@ async def test_conversations(
     )
 
     assert conversation_id == response.json()["conversation_id"]
-    assert len(conversation) == 1
-    assert conversation[0]["role"] == "system"
+    assert len(response.json()["learning_moments"]) > 0  # noqa: WPS507
+    assert isinstance(conversation_response, str)
+    assert len(conversation_response) > 0  # noqa: WPS507
 
     # Now get conversation:
     response = await client.get(

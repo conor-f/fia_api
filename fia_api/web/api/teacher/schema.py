@@ -1,30 +1,94 @@
-from typing import List, Union
+from typing import List, Optional, Union
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 # OpenAI Related Response Models:
 class Mistake(BaseModel):
-    """Represents a "Mistake" that the model found in the user input."""
+    """A single Mistake a user made in their message."""
 
-    mistake_text: str
-    fixed_text: str
-    explanation: str
+    incorrect_section: str = Field(
+        description=(
+            "The section of the sentence of the user message the grammar "
+            "mistake is in"
+        ),
+    )
+    corrected_section: str = Field(
+        description="The corrected section of the sentence in German",
+    )
+    explanation: str = Field(
+        description=(
+            "The English language explanation of why this section of the "
+            "sentence is incorrect. Give details such as if it is using the "
+            "wrong gender/suffix, if the verb conjugation is wrong, etc. If "
+            "the sentence is correct, but there is a better way to phrase it, "
+            "explain this too."
+        ),
+    )
 
 
-class TranslatedWords(BaseModel):
-    """Represents a "Translation" that the model was requested to make."""
+class Translation(BaseModel):
+    """A word or phrase the user wants translated."""
 
-    word: str
-    translated_word: str
+    phrase: str = Field(
+        description=(
+            'The word or phrase the user wants translated. e.g. "Book", '
+            "'gerne', \"lesen\""
+        ),
+    )
+    translated_phrase: str = Field(
+        description=(
+            "The translation of the word or phrase in context of the "
+            "sentence. If it is a noun, include the correct gender. "
+            "e.g. Das Buch, Die Hande, etc"
+        ),
+    )
+
+
+class LearningMoment(BaseModel):
+    """A moment in a conversation a user can learn from."""
+
+    moment: Union[Mistake, Translation] = Field(
+        description=(
+            "A single language learning mistake found in a section of the "
+            "users message"
+        ),
+    )
+
+
+# This is returned by the model looking for mistakes in the user sentence.
+class LearningMoments(BaseModel):
+    """A list of individual LearningMoment objects."""
+
+    learning_moments: List[LearningMoment] = Field(
+        description=(
+            "A list of language learning mistakes in the users message. "
+            "There should be one LearningMoment per individual mistake in "
+            "the sentence."
+        ),
+    )
+
+
+# This is returned by the model trying to continue on the conversation with the
+# user in an educational way.
+class ConversationContinuation(BaseModel):
+    """Basic wrapper to supply description data to OpenAI."""
+
+    message: str = Field(
+        description=(
+            "This is the response to to users message. You should always "
+            "try respond in German. If the user doesn't understand, then try "
+            "to use even more simple German in your response until you can "
+            "only use English. Responding in English is a last resort."
+        ),
+    )
 
 
 class TeacherResponse(BaseModel):
     """Represents the entire response from the "Teacher"."""
 
-    translated_words: List[TranslatedWords]
-    mistakes: List[Mistake]
-    conversation_response: str
+    learning_moments: LearningMoments
+    conversation_response: ConversationContinuation
 
 
 class TeacherConverseRequest(BaseModel):
@@ -48,31 +112,12 @@ class UserConversationList(BaseModel):
     conversations: List[ConversationSnippet]
 
 
-class ConversationLine(BaseModel):
-    """A single line of a conversation."""
-
-    # If str, then this is just a user response.
-    line: Union[TeacherResponse, str]
-
-
-class UserConversationElement(BaseModel):
-    """The user part of the conversation."""
-
-    role: str = "user"
-    message: str
-
-
-class TeacherConversationElement(BaseModel):
-    """The teacher response."""
-
-    role: str = "teacher"
-    response: TeacherResponse
-
-
 class ConversationElement(BaseModel):
     """A single part of a conversation. Either from the user or system."""
 
-    conversation_element: Union[TeacherConversationElement, UserConversationElement]
+    role: str
+    message: str
+    learning_moments: Optional[LearningMoments] = None
 
 
 class ConversationResponse(BaseModel):
@@ -80,3 +125,11 @@ class ConversationResponse(BaseModel):
 
     conversation_id: str
     conversation: List[ConversationElement]
+
+
+class ConverseResponse(BaseModel):
+    """Response from the Converse endpoint."""
+
+    conversation_id: str
+    learning_moments: LearningMoments
+    conversation_response: str

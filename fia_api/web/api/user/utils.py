@@ -1,4 +1,3 @@
-import json
 import uuid
 from datetime import datetime, timedelta
 from typing import Any, Dict, Union
@@ -16,13 +15,7 @@ from fia_api.db.models.conversation_model import (
 )
 from fia_api.db.models.user_model import UserModel
 from fia_api.settings import settings
-from fia_api.web.api.teacher.schema import (
-    ConversationElement,
-    ConversationResponse,
-    TeacherConversationElement,
-    TeacherResponse,
-    UserConversationElement,
-)
+from fia_api.web.api.teacher.schema import ConversationElement, ConversationResponse
 from fia_api.web.api.user.schema import AuthenticatedUser, TokenPayload
 
 ACCESS_TOKEN_EXPIRY_MINUTES = 30
@@ -132,23 +125,26 @@ async def get_current_user(token: str = Depends(reuseable_oauth)) -> Authenticat
 
 
 async def format_conversation_element(
-    conversation_element: Dict[str, str],
-) -> Union[TeacherConversationElement, UserConversationElement]:
+    conversation_element: Dict[Any, Any],
+) -> ConversationElement:
     """
-    Return the correct object.
+    Formats a conversation element like dict into an actual object.
 
-    :param conversation_element: A dict of the current conversation element.
-    :returns: A sensible representation of the conversation element.
+    :param conversation_element: dict of mostly str -> str
+    :return: ConversationElement
     """
-    # Ignoring type here as MyPy doesn't co-operate with Tortoise ORM for enums.
-    if conversation_element["role"] == ConversationElementRole.SYSTEM:  # type: ignore
-        return TeacherConversationElement(
-            response=TeacherResponse(
-                **json.loads(conversation_element["content"]),
-            ),
+    parsed_element = {
+        "role": conversation_element["role"].value,
+        "message": conversation_element["content"],
+    }
+
+    if "learning_moments" in conversation_element:
+        parsed_element["learning_moments"] = conversation_element.get(
+            "learning_moments",
+            None,
         )
 
-    return UserConversationElement(message=conversation_element["content"])
+    return ConversationElement(**parsed_element)
 
 
 async def format_conversation_for_response(
@@ -163,27 +159,24 @@ async def format_conversation_for_response(
                     of the whole conversation.
     :returns: ConversationResponse
     """
-    raw_conversation = await ConversationElementModel.filter(
-        conversation_id=uuid.UUID(conversation_id),
-    ).values()
+    raw_conversation = (
+        await ConversationElementModel.filter(
+            conversation_id=uuid.UUID(conversation_id),
+        )
+        .exclude(
+            role=ConversationElementRole.ASSISTANT,
+        )
+        .values()
+    )
 
     if last:
         raw_conversation = [raw_conversation[-1]]
 
     conversation_list = []
     for conversation_element in raw_conversation:
-        try:
-            conversation_list.append(
-                ConversationElement(
-                    conversation_element=await format_conversation_element(
-                        conversation_element,
-                    ),
-                ),
-            )
-        except Exception as ex:
-            # TODO: This is expected in the case of the initial assistant
-            # message.
-            logger.debug(ex)
+        conversation_list.append(
+            await format_conversation_element(conversation_element),
+        )
 
     return ConversationResponse(
         conversation_id=conversation_id,

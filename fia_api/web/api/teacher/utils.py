@@ -1,7 +1,7 @@
 # noqa: WPS462
 import json
 import uuid
-from typing import Dict, List
+from typing import Any, Dict, List
 
 import openai
 from loguru import logger
@@ -14,10 +14,38 @@ from fia_api.db.models.token_usage_model import TokenUsageModel
 from fia_api.db.models.user_conversation_model import UserConversationModel
 from fia_api.db.models.user_model import UserModel
 from fia_api.settings import settings
-from fia_api.web.api.teacher.schema import ConversationResponse, TeacherResponse
-from fia_api.web.api.user.utils import format_conversation_for_response
+from fia_api.web.api.flashcards.utils import create_flashcard
+from fia_api.web.api.teacher.schema import (
+    ConversationContinuation,
+    ConverseResponse,
+    LearningMoments,
+    Mistake,
+    Translation,
+)
 
 openai.api_key = settings.openai_api_key
+
+
+async def store_token_usage(
+    conversation_id: str,
+    openai_response: Any,
+) -> None:  # type: ignore
+    """
+    Store the token usage for an OpenAI request.
+
+    :param conversation_id: String to store the usage under
+    :param openai_response: The messy openAI datatype
+    """
+    token_usage_model = await TokenUsageModel.get(
+        conversation_id=uuid.UUID(conversation_id),
+    )
+
+    token_usage_model.prompt_token_usage += openai_response.usage["prompt_tokens"]
+    token_usage_model.completion_token_usage += openai_response.usage[
+        "completion_tokens"
+    ]
+
+    await token_usage_model.save()
 
 
 async def get_messages_from_conversation_id(
@@ -42,29 +70,124 @@ async def get_messages_from_conversation_id(
     ]
 
 
-# Ignoring type as I don't really know what the OpenAI API returns...
-async def get_openai_response(conversation_id: str):  # type: ignore
+async def get_learning_moments_from_message(
+    message: str,
+    conversation_id: str,
+) -> LearningMoments:
     """
-    Wraps the OpenAI API call. Mostly to make mocking easier.
+    Get LearningMoments from a user message.
 
-    :param conversation_id: String conversation_id
-    :return: OpenAI Chat Response object
+    :param message: String message from the user to look for mistakes in.
+    :param conversation_id: Store the token usage in the conversation.
+    :returns: LearningMoments
     """
-    return openai.ChatCompletion.create(
+    openai_response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo-0613",
+        messages=[
+            {
+                "role": "assistant",
+                "content": settings.get_learning_moments_prompt,
+            },
+            {
+                "role": "user",
+                "content": message,
+            },
+        ],
+        functions=[
+            {
+                "name": "get_learning_moments",
+                "description": "List all of the mistakes in the user's message and any words in the user message that they would like translated.",  # noqa: E501
+                "parameters": LearningMoments.schema(),
+            },
+        ],
+        function_call={"name": "get_learning_moments"},
+    )
+
+    await store_token_usage(conversation_id, openai_response)
+
+    return LearningMoments(
+        **json.loads(
+            openai_response.choices[0].message.function_call.arguments,  # noqa: WPS219
+        ),
+    )
+
+
+async def get_conversation_continuation(
+    conversation_id: str,
+) -> ConversationContinuation:
+    """
+    Continue the conversation with the user based on the context.
+
+    The conversation in the DB must be updated with the most recent user
+    message.
+
+    :param conversation_id: String conversation to continue on.
+    :returns: ConversationContinuation
+    """
+    openai_response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo-0613",
         messages=await get_messages_from_conversation_id(conversation_id),
         functions=[
             {
-                "name": "get_answer_for_user_query",
-                "description": "Get user language learning mistakes and a sentence to continue the conversation",  # noqa: E501
-                "parameters": TeacherResponse.schema(),
+                "name": "get_conversation_response",
+                "description": "Get the conversational response to the user's message.",
+                "parameters": ConversationContinuation.schema(),
             },
         ],
-        function_call={"name": "get_answer_for_user_query"},
+        function_call={"name": "get_conversation_response"},
+    )
+
+    await store_token_usage(conversation_id, openai_response)
+
+    return ConversationContinuation(
+        **json.loads(
+            openai_response.choices[0].message.function_call.arguments,  # noqa: WPS219
+        ),
     )
 
 
-async def get_response(conversation_id: str, message: str) -> ConversationResponse:
+async def create_flashcards_from_learning_moments(
+    learning_moments: LearningMoments,
+    user: UserModel,
+    conversation_id: str,
+) -> None:
+    """
+    Store each learning moment as a flashcard.
+
+    :param learning_moments: LearningMoments to store as flashcards.
+    :param user: UserModel to associate with the flashcards.
+    :param conversation_id: String conversation ID for context.
+    """
+    for learning_moment in learning_moments.learning_moments:
+        parsed_learning_moment = learning_moment.moment
+
+        if isinstance(parsed_learning_moment, Mistake):
+            await create_flashcard(
+                user.username,
+                parsed_learning_moment.incorrect_section,
+                parsed_learning_moment.corrected_section
+                + "\n\n"
+                + parsed_learning_moment.explanation,
+                conversation_id,
+            )
+        elif isinstance(parsed_learning_moment, Translation):
+            await create_flashcard(
+                user.username,
+                parsed_learning_moment.phrase,
+                parsed_learning_moment.translated_phrase,
+                conversation_id,
+                both_sides=True,
+            )
+        else:
+            logger.error("Some weirdness going on....")
+            logger.error(learning_moment)
+
+
+async def get_response(
+    conversation_id: str,
+    message: str,
+    user: UserModel,
+) -> ConverseResponse:
     """
     Converse with OpenAI.
 
@@ -73,7 +196,8 @@ async def get_response(conversation_id: str, message: str) -> ConversationRespon
 
     :param conversation_id: String ID representing the conversation.
     :param message: String message the user wants to send.
-    :return: ConversationResponse
+    :param user: UserModel, needed to store flashcards.
+    :return: ConverseResponse
     """
     await ConversationElementModel.create(
         conversation_id=uuid.UUID(conversation_id),
@@ -81,41 +205,37 @@ async def get_response(conversation_id: str, message: str) -> ConversationRespon
         content=message,
     )
 
-    chat_response = await get_openai_response(conversation_id)
-    logger.warning("-------------------------")
-    logger.warning(chat_response)
-    logger.warning("-------------------------")
-
-    # Do this JSON dance to have it serialize correctly.
-    teacher_response = json.dumps(
-        json.loads(
-            chat_response.choices[0].message.function_call.arguments,  # noqa: WPS219
-        ),
+    learning_moments = await get_learning_moments_from_message(
+        message,
+        conversation_id,
     )
+    await create_flashcards_from_learning_moments(
+        learning_moments,
+        user,
+        conversation_id,
+    )
+    conversation_continuation = await get_conversation_continuation(conversation_id)
+
+    # TODO: Store the learning moments.
+    logger.info(learning_moments)
 
     await ConversationElementModel.create(
         conversation_id=uuid.UUID(conversation_id),
         role=ConversationElementRole.SYSTEM,
-        content=teacher_response,
+        content=conversation_continuation.message,
     )
 
-    token_usage_model = await TokenUsageModel.get(
-        conversation_id=uuid.UUID(conversation_id),
-    )
-    token_usage_model.prompt_token_usage += chat_response.usage["prompt_tokens"]
-    token_usage_model.completion_token_usage += chat_response.usage["completion_tokens"]
-    await token_usage_model.save()
-
-    return await format_conversation_for_response(
-        conversation_id,
-        last=True,
+    return ConverseResponse(
+        conversation_id=conversation_id,
+        learning_moments=learning_moments,
+        conversation_response=conversation_continuation.message,
     )
 
 
 async def initialize_conversation(
     user: UserModel,
     message: str,
-) -> ConversationResponse:
+) -> ConverseResponse:
     """
     Starts the conversation.
 
@@ -130,8 +250,8 @@ async def initialize_conversation(
 
     await ConversationElementModel.create(
         conversation_id=conversation_id,
-        role=ConversationElementRole.SYSTEM,
-        content=settings.prompts["p2"],
+        role=ConversationElementRole.ASSISTANT,
+        content=settings.conversation_continuation_prompt,
     )
 
     await UserConversationModel.create(
@@ -141,4 +261,4 @@ async def initialize_conversation(
 
     await TokenUsageModel.create(conversation_id=conversation_id)
 
-    return await get_response(str(conversation_id), message)
+    return await get_response(str(conversation_id), message, user)

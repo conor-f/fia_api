@@ -166,10 +166,9 @@ async def create_flashcards_from_learning_moments(
             await create_flashcard(
                 user.username,
                 parsed_learning_moment.incorrect_section,
-                parsed_learning_moment.corrected_section
-                + "\n\n"
-                + parsed_learning_moment.explanation,
+                parsed_learning_moment.corrected_section,
                 conversation_id,
+                explanation=parsed_learning_moment.explanation,
             )
         elif isinstance(parsed_learning_moment, Translation):
             await create_flashcard(

@@ -1,4 +1,4 @@
-from typing import List, Optional, Union
+from typing import Any, List, Optional, Union
 
 from pydantic import BaseModel, Field
 
@@ -117,7 +117,7 @@ class ConversationElement(BaseModel):
 
     role: str
     message: str
-    learning_moments: Optional[LearningMoments] = None
+    learning_moments: Optional[Any] = None
 
 
 class ConversationResponse(BaseModel):

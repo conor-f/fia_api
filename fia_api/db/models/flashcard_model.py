@@ -27,6 +27,7 @@ class FlashcardModel(FiaBaseModel):
     # The "front" and "back" of the card. i.e. the question/answer.
     front = fields.TextField(null=False, required=True)
     back = fields.TextField(null=False, required=True)
+    explanation = fields.TextField(null=True, required=False)
 
     # The number of seconds added to get the next_review_date.
     last_review_interval = fields.IntField(null=False, default=60)

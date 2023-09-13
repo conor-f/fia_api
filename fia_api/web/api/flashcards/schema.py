@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel
 
@@ -12,6 +12,7 @@ class Flashcard(BaseModel):
     next_review_date: datetime
     front: str
     back: str
+    explanation: Optional[str]
     last_reviewed_date: datetime
 
 

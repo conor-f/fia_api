@@ -1,16 +1,17 @@
 import uuid
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from fia_api.db.models.flashcard_model import FlashcardModel
 from fia_api.db.models.user_model import UserModel
 from fia_api.web.api.flashcards.schema import Flashcard, GetFlashcardsResponse
 
 
-async def create_flashcard(
+async def create_flashcard(  # noqa: WPS211
     username: str,
     front: str,
     back: str,
     conversation_id: str,
+    explanation: Optional[str] = None,
     both_sides: bool = False,
 ) -> None:
     """
@@ -20,6 +21,7 @@ async def create_flashcard(
     :param front: String front of the card.
     :param back: String back of the card.
     :param conversation_id: String conversation_id of the context.
+    :param explanation: String explanation of the answer.
     :param both_sides: Optional boolean, if True create a card front:back and
                         back:front.
     """
@@ -27,6 +29,7 @@ async def create_flashcard(
         user=await UserModel.get(username=username),
         front=front,
         back=back,
+        explanation=explanation,
         conversation_id=uuid.UUID(conversation_id),
     )
 
@@ -35,6 +38,7 @@ async def create_flashcard(
             user=await UserModel.get(username=username),
             front=back,
             back=front,
+            explanation=explanation,
             conversation_id=uuid.UUID(conversation_id),
         )
 
@@ -56,6 +60,7 @@ def format_flashcards_for_response(
                 next_review_date=flashcard["next_review_date"],
                 front=flashcard["front"],
                 back=flashcard["back"],
+                explanation=flashcard["explanation"],
                 last_reviewed_date=flashcard["last_modified"],
             )
             for flashcard in raw_flashcards

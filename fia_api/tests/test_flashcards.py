@@ -88,6 +88,7 @@ async def test_flashcards(
         "front of card",
         "back of card",
         str(uuid.uuid4()),
+        explanation="Explainer",
     )
 
     # Now one flashcard
@@ -97,6 +98,7 @@ async def test_flashcards(
     )
     assert len(response.json()["flashcards"]) == 1
     assert response.json()["flashcards"][0]["front"] == "front of card"
+    assert response.json()["flashcards"][0]["explanation"] == "Explainer"
 
     original_details = response.json()["flashcards"][0]
     flashcard_id = original_details["id"]

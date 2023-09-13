@@ -10,6 +10,7 @@ from fia_api.db.models.conversation_model import (
     ConversationElementModel,
     ConversationElementRole,
 )
+from fia_api.db.models.learning_moment_model import LearningMomentModel
 from fia_api.db.models.token_usage_model import TokenUsageModel
 from fia_api.db.models.user_conversation_model import UserConversationModel
 from fia_api.db.models.user_model import UserModel
@@ -165,10 +166,9 @@ async def create_flashcards_from_learning_moments(
             await create_flashcard(
                 user.username,
                 parsed_learning_moment.incorrect_section,
-                parsed_learning_moment.corrected_section
-                + "\n\n"
-                + parsed_learning_moment.explanation,
+                parsed_learning_moment.corrected_section,
                 conversation_id,
+                explanation=parsed_learning_moment.explanation,
             )
         elif isinstance(parsed_learning_moment, Translation):
             await create_flashcard(
@@ -181,6 +181,27 @@ async def create_flashcards_from_learning_moments(
         else:
             logger.error("Some weirdness going on....")
             logger.error(learning_moment)
+
+
+async def store_learning_moments(
+    user_conversation_element: ConversationElementModel,
+    learning_moments: LearningMoments,
+) -> None:
+    """
+    Store learning moments in the DB.
+
+    :param user_conversation_element: ConversationElement these moments are
+                                      related to.
+    :param learning_moments: The LearningMoments to store in the DB.
+    """
+    # TODO: These saves can't all be necessary...
+    for learning_moment in learning_moments.learning_moments:
+        learning_moment_model = LearningMomentModel(
+            learning_moment=learning_moment.model_dump_json(),
+        )
+        await learning_moment_model.save()
+        await user_conversation_element.learning_moments.add(learning_moment_model)
+        await user_conversation_element.save()
 
 
 async def get_response(
@@ -199,16 +220,20 @@ async def get_response(
     :param user: UserModel, needed to store flashcards.
     :return: ConverseResponse
     """
-    await ConversationElementModel.create(
+    user_conversation_element = await ConversationElementModel.create(
         conversation_id=uuid.UUID(conversation_id),
         role=ConversationElementRole.USER,
         content=message,
     )
+    await user_conversation_element.save()
 
     learning_moments = await get_learning_moments_from_message(
         message,
         conversation_id,
     )
+
+    await store_learning_moments(user_conversation_element, learning_moments)
+
     await create_flashcards_from_learning_moments(
         learning_moments,
         user,

@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timedelta
-from typing import Any, Dict, Union
+from typing import Any, Union
 
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
@@ -125,7 +125,7 @@ async def get_current_user(token: str = Depends(reuseable_oauth)) -> Authenticat
 
 
 async def format_conversation_element(
-    conversation_element: Dict[Any, Any],
+    conversation_element: ConversationElementModel,
 ) -> ConversationElement:
     """
     Formats a conversation element like dict into an actual object.
@@ -133,16 +133,18 @@ async def format_conversation_element(
     :param conversation_element: dict of mostly str -> str
     :return: ConversationElement
     """
-    parsed_element = {
-        "role": conversation_element["role"].value,
-        "message": conversation_element["content"],
+    parsed_element: dict[str, Any] = {
+        "role": conversation_element.role.value,
+        "message": conversation_element.content,
     }
 
-    if "learning_moments" in conversation_element:
-        parsed_element["learning_moments"] = conversation_element.get(
-            "learning_moments",
-            None,
-        )
+    await conversation_element.fetch_related("learning_moments")
+    learning_moments = conversation_element.learning_moments
+
+    if learning_moments:
+        parsed_element["learning_moments"] = [
+            learning_moment.learning_moment for learning_moment in learning_moments
+        ]
 
     return ConversationElement(**parsed_element)
 
@@ -159,14 +161,10 @@ async def format_conversation_for_response(
                     of the whole conversation.
     :returns: ConversationResponse
     """
-    raw_conversation = (
-        await ConversationElementModel.filter(
-            conversation_id=uuid.UUID(conversation_id),
-        )
-        .exclude(
-            role=ConversationElementRole.ASSISTANT,
-        )
-        .values()
+    raw_conversation = await ConversationElementModel.filter(
+        conversation_id=uuid.UUID(conversation_id),
+    ).exclude(
+        role=ConversationElementRole.ASSISTANT,
     )
 
     if last:

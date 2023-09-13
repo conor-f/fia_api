@@ -5,7 +5,6 @@ from typing import Dict, List
 import pytest
 from fastapi import FastAPI
 from httpx import AsyncClient
-from loguru import logger
 from pytest_mock import MockerFixture
 
 
@@ -222,8 +221,14 @@ async def test_conversations(
             "conversation_id": conversation_id,
         },
     )
-    logger.error(response.json())
+
     assert len(response.json()["conversation"]) == 4
+    learning_moments_count = 0
+    for element in response.json()["conversation"]:
+        if element["learning_moments"]:
+            learning_moments_count += len(element["learning_moments"])
+
+    assert learning_moments_count > 0
 
     # Now we have flashcards
     response = await client.get(

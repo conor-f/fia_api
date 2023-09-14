@@ -4,6 +4,7 @@ import uuid
 from typing import Any, Dict, List
 
 import openai
+from fastapi import UploadFile
 from loguru import logger
 
 from fia_api.db.models.conversation_model import (
@@ -287,3 +288,17 @@ async def initialize_conversation(
     await TokenUsageModel.create(conversation_id=conversation_id)
 
     return await get_response(str(conversation_id), message, user)
+
+
+async def get_text_from_audio(audio_file: UploadFile) -> str:
+    """
+    Given a file, return the text.
+
+    :param audio_file: UploadFile object to transcode to text.
+    :return: String text.
+    """
+    with open("/tmp/whatever.wav", "wb") as fh:
+        fh.write(audio_file.file.read())
+
+    with open("/tmp/whatever.wav", "rb") as fh:
+        return openai.Audio.transcribe("whisper-1", fh)["text"]

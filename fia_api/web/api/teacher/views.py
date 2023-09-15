@@ -52,6 +52,9 @@ async def converse_with_audio(
     :param user: The AuthenticatedUser making the request.
     :returns: ConverseResponse of mistakes and conversation.
     """
+    # TODO: Should be the same endpoint as above.
+    # TODO: For some reason POST vars and File uploads are a mess. Fix all of
+    # this nonsense.
     message = await get_text_from_audio(audio_file)
 
     if conversation_id == "new":

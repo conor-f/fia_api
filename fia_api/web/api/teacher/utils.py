@@ -254,6 +254,7 @@ async def get_response(
     return ConverseResponse(
         conversation_id=conversation_id,
         learning_moments=learning_moments,
+        input_message=message,
         conversation_response=conversation_continuation.message,
     )
 
@@ -297,8 +298,10 @@ async def get_text_from_audio(audio_file: UploadFile) -> str:
     :param audio_file: UploadFile object to transcode to text.
     :return: String text.
     """
-    with open("/tmp/whatever.wav", "wb") as fh:
-        fh.write(audio_file.file.read())
+    # TODO: Shouldn't have to do this dance with writing/reading the file!
+    with open("/tmp/whatever.wav", "wb") as tmp_fh:  # noqa: S108
+        tmp_fh.write(audio_file.file.read())
 
-    with open("/tmp/whatever.wav", "rb") as fh:
-        return openai.Audio.transcribe("whisper-1", fh)["text"]
+    with open("/tmp/whatever.wav", "rb") as in_fh:  # noqa: S108
+        # TODO: Store the token usage too
+        return openai.Audio.transcribe("whisper-1", in_fh)["text"]

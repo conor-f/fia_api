@@ -4,6 +4,7 @@ import uuid
 from typing import Any, Dict, List
 
 import openai
+from fastapi import UploadFile
 from loguru import logger
 
 from fia_api.db.models.conversation_model import (
@@ -253,6 +254,7 @@ async def get_response(
     return ConverseResponse(
         conversation_id=conversation_id,
         learning_moments=learning_moments,
+        input_message=message,
         conversation_response=conversation_continuation.message,
     )
 
@@ -287,3 +289,19 @@ async def initialize_conversation(
     await TokenUsageModel.create(conversation_id=conversation_id)
 
     return await get_response(str(conversation_id), message, user)
+
+
+async def get_text_from_audio(audio_file: UploadFile) -> str:
+    """
+    Given a file, return the text.
+
+    :param audio_file: UploadFile object to transcode to text.
+    :return: String text.
+    """
+    # TODO: Shouldn't have to do this dance with writing/reading the file!
+    with open("/tmp/whatever.wav", "wb") as tmp_fh:  # noqa: S108
+        tmp_fh.write(audio_file.file.read())
+
+    with open("/tmp/whatever.wav", "rb") as in_fh:  # noqa: S108
+        # TODO: Store the token usage too
+        return openai.Audio.transcribe("whisper-1", in_fh)["text"]

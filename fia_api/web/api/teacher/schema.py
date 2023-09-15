@@ -132,4 +132,5 @@ class ConverseResponse(BaseModel):
 
     conversation_id: str
     learning_moments: LearningMoments
+    input_message: str
     conversation_response: str

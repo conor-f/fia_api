@@ -107,11 +107,16 @@ async def get_learning_moments_from_message(
 
     await store_token_usage(conversation_id, openai_response)
 
-    return LearningMoments(
-        **json.loads(
-            openai_response.choices[0].message.function_call.arguments,  # noqa: WPS219
-        ),
-    )
+    try:
+        return LearningMoments(
+            **json.loads(
+                openai_response.choices[  # noqa: WPS219
+                    0
+                ].message.function_call.arguments,
+            ),
+        )
+    except Exception:
+        return LearningMoments(learning_moments=[])
 
 
 async def get_conversation_continuation(

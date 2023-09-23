@@ -17,7 +17,7 @@ from fia_api.settings import settings
 from fia_api.web.api.teacher.schema import ConversationElement, ConversationResponse
 from fia_api.web.api.user.schema import AuthenticatedUser, TokenPayload
 
-ACCESS_TOKEN_EXPIRY_MINUTES = 30
+ACCESS_TOKEN_EXPIRY_MINUTES = 60 * 24
 REFRESH_TOKEN_EXPIRY_MINUTES = 60 * 24 * 7
 ALGORITHM = "HS256"
 

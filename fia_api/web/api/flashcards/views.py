@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fia_api.db.models.flashcard_model import FLASHCARD_EASE, FlashcardModel
 from fia_api.db.models.user_model import UserModel
 from fia_api.web.api.flashcards.schema import (
+    DeleteFlashcardRequest,
     GetFlashcardsResponse,
     UpdateFlashcardRequest,
 )
@@ -75,3 +76,28 @@ async def get_flashcards(
     raw_flashcards = await flashcards_qs.values()
 
     return format_flashcards_for_response(raw_flashcards)
+
+
+@router.post("/delete-flashcard", status_code=200)  # noqa: WPS432
+async def delete_flashcard(
+    delete_flashcard_request: DeleteFlashcardRequest,
+    user: AuthenticatedUser = Depends(get_current_user),
+) -> None:
+    """
+    Delete the flashcard associated with a user.
+
+    TODO: Ensure the flashcard is associated with the user logged in.
+
+    :param delete_flashcard_request: The flashcard ID to delete.
+    :param user: The AuthenticatedUser making the request.
+    :raises HTTPException: For no matching flashcard.
+    """
+    flashcard = await FlashcardModel.get(id=delete_flashcard_request.id)
+
+    if not flashcard:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="flashcard not found",
+        )
+
+    await flashcard.delete()

@@ -5,7 +5,6 @@ from typing import Any, Union
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt
-from loguru import logger
 from passlib.context import CryptContext
 from pydantic import ValidationError
 
@@ -111,9 +110,7 @@ async def get_current_user(token: str = Depends(reuseable_oauth)) -> Authenticat
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    logger.warning(f"GOT TOKEN DATA: {token_data}")
     user = await UserModel.get(username=token_data.sub)
-    logger.warning(f"USER::::: {user}")
 
     if not user:
         raise HTTPException(

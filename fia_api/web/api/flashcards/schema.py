@@ -28,3 +28,9 @@ class GetFlashcardsResponse(BaseModel):
     """The resposne from the API when Flashcards are gotten."""
 
     flashcards: List[Flashcard]
+
+
+class DeleteFlashcardRequest(BaseModel):
+    """Request object for deleting a flashcard."""
+
+    id: int

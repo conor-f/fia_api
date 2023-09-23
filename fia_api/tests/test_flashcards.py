@@ -74,6 +74,7 @@ async def test_flashcards(
 
     get_flashcards_url = fastapi_app.url_path_for("get_flashcards")
     update_flashcard_url = fastapi_app.url_path_for("update_flashcard")
+    delete_flashcard_url = fastapi_app.url_path_for("delete_flashcard")
 
     # No flashcards by default:
     response = await client.get(
@@ -137,3 +138,18 @@ async def test_flashcards(
         headers=auth_headers,
     )
     assert len(response.json()["flashcards"]) == 3
+
+    # Delete one:
+    response = await client.post(
+        delete_flashcard_url,
+        headers=auth_headers,
+        json={
+            "id": flashcard_id,
+        },
+    )
+
+    response = await client.get(
+        get_flashcards_url,
+        headers=auth_headers,
+    )
+    assert len(response.json()["flashcards"]) == 2

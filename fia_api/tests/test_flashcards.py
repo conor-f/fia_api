@@ -75,6 +75,9 @@ async def test_flashcards(
     get_flashcards_url = fastapi_app.url_path_for("get_flashcards")
     update_flashcard_url = fastapi_app.url_path_for("update_flashcard")
     delete_flashcard_url = fastapi_app.url_path_for("delete_flashcard")
+    create_flashcard_url = fastapi_app.url_path_for("create_flashcard")
+
+    conversation_id = str(uuid.uuid4())
 
     # No flashcards by default:
     response = await client.get(
@@ -88,7 +91,7 @@ async def test_flashcards(
         username,
         "front of card",
         "back of card",
-        str(uuid.uuid4()),
+        conversation_id,
         explanation="Explainer",
     )
 
@@ -153,3 +156,21 @@ async def test_flashcards(
         headers=auth_headers,
     )
     assert len(response.json()["flashcards"]) == 2
+
+    # Manually create one:
+    response = await client.post(
+        create_flashcard_url,
+        headers=auth_headers,
+        json={
+            "conversation_id": conversation_id,
+            "front": "FFF",
+            "back": "BBB",
+            "both_sides": True,
+        },
+    )
+
+    response = await client.get(
+        get_flashcards_url,
+        headers=auth_headers,
+    )
+    assert len(response.json()["flashcards"]) == 4

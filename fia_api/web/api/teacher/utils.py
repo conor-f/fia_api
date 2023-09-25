@@ -1,10 +1,12 @@
 # noqa: WPS462
 import json
+import os
 import uuid
 from typing import Any, Dict, List
 
 import openai
 from fastapi import UploadFile
+from google.cloud import texttospeech
 from loguru import logger
 
 from fia_api.db.models.conversation_model import (
@@ -304,9 +306,41 @@ async def get_text_from_audio(audio_file: UploadFile) -> str:
     :return: String text.
     """
     # TODO: Shouldn't have to do this dance with writing/reading the file!
+    #   This may be related to with not working with async...
     with open("/tmp/whatever.wav", "wb") as tmp_fh:  # noqa: S108
         tmp_fh.write(audio_file.file.read())
 
     with open("/tmp/whatever.wav", "rb") as in_fh:  # noqa: S108
         # TODO: Store the token usage too
         return openai.Audio.transcribe("whisper-1", in_fh)["text"]
+
+
+# TODO: Make this bytes or whatever.
+def get_audio_stream_from_text(text: str) -> Any:
+    """
+    Given some text, return a byte stream of the audio as MP3.
+
+    :param text: String text to convert.
+    :yields: MP3 audio stream.
+    """
+    os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = settings.google_cloud_api_key_path
+
+    client = texttospeech.TextToSpeechClient()
+    synthesis_input = texttospeech.SynthesisInput(text=text)
+
+    voice = texttospeech.VoiceSelectionParams(
+        language_code="de",
+        ssml_gender=texttospeech.SsmlVoiceGender.NEUTRAL,
+    )
+
+    audio_config = texttospeech.AudioConfig(
+        audio_encoding=texttospeech.AudioEncoding.MP3,
+    )
+
+    response = client.synthesize_speech(
+        input=synthesis_input,
+        voice=voice,
+        audio_config=audio_config,
+    )
+
+    yield response.audio_content

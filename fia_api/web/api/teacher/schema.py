@@ -134,3 +134,10 @@ class ConverseResponse(BaseModel):
     learning_moments: LearningMoments
     input_message: str
     conversation_response: str
+
+
+class GetAudioRequest(BaseModel):
+    """Request to the get-audio endpoint."""
+
+    text: str
+    # TODO: Add features like language and speaker type?

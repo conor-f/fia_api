@@ -16,6 +16,15 @@ class Flashcard(BaseModel):
     last_reviewed_date: datetime
 
 
+class CreateFlashcardRequest(BaseModel):
+    """Request object for manually creating a flashcard."""
+
+    conversation_id: str
+    front: str
+    back: str
+    both_sides: Optional[bool] = False
+
+
 class UpdateFlashcardRequest(BaseModel):
     """Request object for updating a flashcard."""
 

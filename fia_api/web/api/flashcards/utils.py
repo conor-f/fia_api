@@ -12,7 +12,7 @@ async def create_flashcard(  # noqa: WPS211
     back: str,
     conversation_id: str,
     explanation: Optional[str] = None,
-    both_sides: bool = False,
+    both_sides: Optional[bool] = False,
 ) -> None:
     """
     Create a flashcard given the params.

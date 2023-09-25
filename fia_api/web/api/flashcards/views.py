@@ -5,10 +5,12 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fia_api.db.models.flashcard_model import FLASHCARD_EASE, FlashcardModel
 from fia_api.db.models.user_model import UserModel
 from fia_api.web.api.flashcards.schema import (
+    CreateFlashcardRequest,
     DeleteFlashcardRequest,
     GetFlashcardsResponse,
     UpdateFlashcardRequest,
 )
+from fia_api.web.api.flashcards.utils import create_flashcard as create_flashcard_util
 from fia_api.web.api.flashcards.utils import format_flashcards_for_response
 from fia_api.web.api.user.schema import AuthenticatedUser
 from fia_api.web.api.user.utils import get_current_user
@@ -101,3 +103,23 @@ async def delete_flashcard(
         )
 
     await flashcard.delete()
+
+
+@router.post("/create-flashcard", status_code=200)  # noqa: WPS432
+async def create_flashcard(
+    create_flashcard_request: CreateFlashcardRequest,
+    user: AuthenticatedUser = Depends(get_current_user),
+) -> None:
+    """
+    Create a flashcard.
+
+    :param create_flashcard_request: The flashcard ID to create.
+    :param user: The AuthenticatedUser making the request.
+    """
+    await create_flashcard_util(
+        user.username,
+        create_flashcard_request.front,
+        create_flashcard_request.back,
+        create_flashcard_request.conversation_id,
+        both_sides=create_flashcard_request.both_sides,
+    )

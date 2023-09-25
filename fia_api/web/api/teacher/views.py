@@ -1,8 +1,14 @@
 from fastapi import APIRouter, Depends, UploadFile
+from fastapi.responses import StreamingResponse
 
 from fia_api.db.models.user_model import UserModel
-from fia_api.web.api.teacher.schema import ConverseResponse, TeacherConverseRequest
+from fia_api.web.api.teacher.schema import (
+    ConverseResponse,
+    GetAudioRequest,
+    TeacherConverseRequest,
+)
 from fia_api.web.api.teacher.utils import (
+    get_audio_stream_from_text,
     get_response,
     get_text_from_audio,
     initialize_conversation,
@@ -55,6 +61,7 @@ async def converse_with_audio(
     # TODO: Should be the same endpoint as above.
     # TODO: For some reason POST vars and File uploads are a mess. Fix all of
     # this nonsense.
+    #   This is because the conversation_id is passed as a str, not a model.
     message = await get_text_from_audio(audio_file)
 
     if conversation_id == "new":
@@ -67,4 +74,24 @@ async def converse_with_audio(
         conversation_id,
         message,
         await UserModel.get(username=user.username),
+    )
+
+
+@router.post("/get-audio")
+def get_audio(
+    audio_request: GetAudioRequest,
+    user: AuthenticatedUser = Depends(get_current_user),
+) -> StreamingResponse:
+    """
+    Given some text and metadata, return the mp3.
+
+    :param audio_request: The details of the request.
+    :param user: The AuthenticatedUser making the request.
+    :returns: GetAudioResponse.
+    """
+    audio_stream = get_audio_stream_from_text(audio_request.text)
+
+    return StreamingResponse(
+        audio_stream,
+        media_type="audio/mpeg",
     )

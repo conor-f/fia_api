@@ -21,6 +21,7 @@ from fia_api.web.api.user.utils import (
     create_access_token,
     create_refresh_token,
     format_conversation_for_response,
+    get_conversation_intro,
     get_current_user,
     get_hashed_password,
     verify_password,
@@ -139,7 +140,9 @@ async def list_user_conversations(
     conversation_list = [
         ConversationSnippet(
             conversation_id=str(conversation["conversation_id"]),
-            conversation_intro="TODO: Conversation snippet.",
+            conversation_intro=await get_conversation_intro(
+                str(conversation["conversation_id"]),
+            ),
         )
         for conversation in conversations
     ]

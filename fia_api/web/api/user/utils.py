@@ -177,3 +177,41 @@ async def format_conversation_for_response(
         conversation_id=conversation_id,
         conversation=conversation_list,
     )
+
+
+async def ellipsise(message: str, max_len: int) -> str:
+    """
+    Given a string and max len, return the capped string with ellipsis.
+
+    :param message: string message to ellipsise.
+    :param max_len: Int max length of the string.
+    :return: Str.
+    """
+    list_message = list(message)
+
+    if len(list_message) >= max_len:
+        list_message = list_message[:max_len]
+        for index in range(1, 4):
+            list_message[-index] = "."
+
+    return "".join(list_message)
+
+
+async def get_conversation_intro(conversation_id: str) -> str:
+    """
+    Returns the intro of a conversation to preview.
+
+    :param conversation_id: String conversation_id.
+    :returns: String of the first message or two.
+    """
+    raw_conversation = await ConversationElementModel.filter(
+        conversation_id=uuid.UUID(conversation_id),
+    ).exclude(
+        role=ConversationElementRole.ASSISTANT,
+    )
+
+    response_message = ""
+    for conversation_element in raw_conversation[:5]:  # noqa: WPS519
+        response_message += conversation_element.content
+
+    return await ellipsise(response_message, 120)  # noqa: WPS432

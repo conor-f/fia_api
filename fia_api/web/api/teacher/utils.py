@@ -312,7 +312,7 @@ async def get_text_from_audio(audio_file: UploadFile) -> str:
 
     with open("/tmp/whatever.wav", "rb") as in_fh:  # noqa: S108
         # TODO: Store the token usage too
-        return openai.Audio.transcribe("whisper-1", in_fh)["text"]
+        return openai.Audio.transcribe("whisper-1", in_fh, language="de")["text"]
 
 
 # TODO: Make this bytes or whatever.

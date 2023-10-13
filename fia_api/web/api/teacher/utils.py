@@ -280,6 +280,7 @@ async def initialize_conversation(
     :param message: The message to start the conversation with.
     :returns: ConversationResponse of the teacher's first reply.
     """
+    user_details = await user.user_details.get()
     conversation_id = uuid.uuid4()
 
     await ConversationElementModel.create(
@@ -291,6 +292,7 @@ async def initialize_conversation(
     await UserConversationModel.create(
         user=user,
         conversation_id=conversation_id,
+        language_code=user_details.current_language_code,
     )
 
     await TokenUsageModel.create(conversation_id=conversation_id)

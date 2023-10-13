@@ -21,6 +21,8 @@ async def test_create_login_delete_user(
     create_url = fastapi_app.url_path_for("create_user")
     login_url = fastapi_app.url_path_for("login")
     delete_url = fastapi_app.url_path_for("delete_user")
+    set_details_url = fastapi_app.url_path_for("set_user_details")
+    get_details_url = fastapi_app.url_path_for("get_user_details")
 
     username = str(uuid.uuid4())
     password = str(uuid.uuid4())
@@ -78,6 +80,34 @@ async def test_create_login_delete_user(
         },
     )
     assert response.status_code != 200
+
+    # Get user details
+    response = await client.get(
+        get_details_url,
+        headers={
+            "Authorization": f"Bearer {access_token}",
+        },
+    )
+    assert response.status_code == 200
+    assert response.json()["current_language_code"] == "de"
+
+    # Set User Details succeeds:
+    response = await client.post(
+        set_details_url,
+        headers={
+            "Authorization": f"Bearer {access_token}",
+        },
+        json={
+            "language_code": "FR",
+        },
+    )
+    response = await client.get(
+        get_details_url,
+        headers={
+            "Authorization": f"Bearer {access_token}",
+        },
+    )
+    assert response.json()["current_language_code"] == "fr"
 
     # Delete with auth succeeds:
     response = await client.post(

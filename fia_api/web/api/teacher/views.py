@@ -80,16 +80,18 @@ async def converse_with_audio(
 @router.post("/get-audio")
 def get_audio(
     audio_request: GetAudioRequest,
+    language_code: str,
     user: AuthenticatedUser = Depends(get_current_user),
 ) -> StreamingResponse:
     """
     Given some text and metadata, return the mp3.
 
     :param audio_request: The details of the request.
+    :param language_code: The language to get the audio in.
     :param user: The AuthenticatedUser making the request.
     :returns: GetAudioResponse.
     """
-    audio_stream = get_audio_stream_from_text(audio_request.text)
+    audio_stream = get_audio_stream_from_text(audio_request.text, language_code)
 
     return StreamingResponse(
         audio_stream,

@@ -370,11 +370,12 @@ async def get_text_from_audio(audio_file: UploadFile) -> str:
 
 
 # TODO: Make this bytes or whatever.
-def get_audio_stream_from_text(text: str) -> Any:
+def get_audio_stream_from_text(text: str, language_code: str) -> Any:
     """
     Given some text, return a byte stream of the audio as MP3.
 
     :param text: String text to convert.
+    :param language_code: String language_code to convert to.
     :yields: MP3 audio stream.
     """
     os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = settings.google_cloud_api_key_path
@@ -383,7 +384,7 @@ def get_audio_stream_from_text(text: str) -> Any:
     synthesis_input = texttospeech.SynthesisInput(text=text)
 
     voice = texttospeech.VoiceSelectionParams(
-        language_code="de",
+        language_code=language_code,
         ssml_gender=texttospeech.SsmlVoiceGender.NEUTRAL,
     )
 

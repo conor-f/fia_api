@@ -14,6 +14,7 @@ from fia_api.web.api.teacher.schema import (
 from fia_api.web.api.user.schema import (
     AuthenticatedUser,
     CreateUserRequest,
+    SetUserDetailsRequest,
     TokenSchema,
     UserDetails,
 )
@@ -95,6 +96,27 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()) -> TokenSchema
         access_token=create_access_token(user.username),
         refresh_token=create_refresh_token(user.username),
     )
+
+
+@router.post("/set-details", status_code=200)  # noqa: WPS432
+async def set_user_details(
+    set_user_details_request: SetUserDetailsRequest,
+    user: AuthenticatedUser = Depends(),
+) -> None:
+    """
+    Sets a user details.
+
+    Primarily used for setting the users current language code.
+
+    :param set_user_details_request: See the schema for current info.
+    :param user: The authenticated user to update.
+    """
+    user_model = await UserModel.get(username=user.username)
+
+    user_details = await user_model.user_details.get()
+    user_details.current_language_code = set_user_details_request.language_code
+
+    await user_details.save()
 
 
 @router.get(

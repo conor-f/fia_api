@@ -42,3 +42,9 @@ class UserDetails(BaseModel):
     username: str
     times_logged_in: int
     current_language_code: str
+
+
+class SetUserDetailsRequest(BaseModel):
+    """A set user details request."""
+
+    language_code: str

@@ -12,6 +12,15 @@ class UserConversationModel(FiaBaseModel):
     )
     conversation_id = fields.UUIDField(null=False, required=True)
 
+    # ISO 639-1 language code:
+    # https://en.wikipedia.org/wiki/List_of_ISO_639-1_codes
+    language_code = fields.CharField(
+        null=False,
+        unique=False,
+        default="de",
+        max_length=2,  # noqa: WPS432
+    )
+
     def __str__(self) -> str:
         return f"UserConversationModel: {self.id}"
 

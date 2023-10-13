@@ -2,6 +2,7 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
+from loguru import logger
 
 from fia_api.db.models.user_conversation_model import UserConversationModel
 from fia_api.db.models.user_details_model import UserDetailsModel
@@ -14,6 +15,7 @@ from fia_api.web.api.teacher.schema import (
 from fia_api.web.api.user.schema import (
     AuthenticatedUser,
     CreateUserRequest,
+    SetUserDetailsRequest,
     TokenSchema,
     UserDetails,
 )
@@ -97,6 +99,28 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()) -> TokenSchema
     )
 
 
+@router.post("/set-details", status_code=200)  # noqa: WPS432
+async def set_user_details(
+    set_user_details_request: SetUserDetailsRequest,
+    user: AuthenticatedUser = Depends(get_current_user),
+) -> None:
+    """
+    Sets a user details.
+
+    Primarily used for setting the users current language code.
+
+    :param set_user_details_request: See the schema for current info.
+    :param user: The authenticated user to update.
+    """
+    logger.warning("A")
+    user_model = await UserModel.get(username=user.username)
+
+    user_details = await user_model.user_details.get()
+    user_details.current_language_code = set_user_details_request.language_code.lower()
+
+    await user_details.save()
+
+
 @router.get(
     "/view-details",
     summary="Get details of currently logged in user",
@@ -117,6 +141,7 @@ async def get_user_details(
     return UserDetails(
         username=user_model.username,
         times_logged_in=user_details.times_logged_in,
+        current_language_code=user_details.current_language_code,
     )
 
 

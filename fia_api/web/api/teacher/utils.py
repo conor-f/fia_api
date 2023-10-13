@@ -29,6 +29,25 @@ from fia_api.web.api.teacher.schema import (
 
 openai.api_key = settings.openai_api_key
 
+# TODO: Move this to a constants/generic location.
+language_code_map = {
+    "de": {
+        "language": "German",
+    },
+    "fr": {
+        "language": "French",
+    },
+    "it": {
+        "language": "Italian",
+    },
+    "es": {
+        "language": "Spanish",
+    },
+    "nl": {
+        "language": "Dutch",
+    },
+}
+
 
 async def store_token_usage(
     conversation_id: str,
@@ -85,12 +104,21 @@ async def get_learning_moments_from_message(
     :param conversation_id: Store the token usage in the conversation.
     :returns: LearningMoments
     """
+    # TODO: This language code can be passed without needing a load of DB calls.
+    user_conversation_model = await UserConversationModel.get(
+        conversation_id=conversation_id,
+    )
+    learning_moments_prompt = get_learning_moments_prompt(
+        user_conversation_model.language_code,
+    )
+
+    logger.warning(learning_moments_prompt)
     openai_response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo-0613",
         messages=[
             {
                 "role": "assistant",
-                "content": settings.get_learning_moments_prompt,
+                "content": learning_moments_prompt,
             },
             {
                 "role": "user",
@@ -249,9 +277,6 @@ async def get_response(
     )
     conversation_continuation = await get_conversation_continuation(conversation_id)
 
-    # TODO: Store the learning moments.
-    logger.info(learning_moments)
-
     await ConversationElementModel.create(
         conversation_id=uuid.UUID(conversation_id),
         role=ConversationElementRole.SYSTEM,
@@ -263,6 +288,30 @@ async def get_response(
         learning_moments=learning_moments,
         input_message=message,
         conversation_response=conversation_continuation.message,
+    )
+
+
+def get_learning_moments_prompt(language_code: str) -> str:
+    """
+    Returns the learning moments prompt formatted for the language.
+
+    :param language_code: String ISO 639-1 language code
+    :returns: String of the conversation prompt
+    """
+    return settings.get_learning_moments_prompt.format(
+        language=language_code_map[language_code]["language"],
+    )
+
+
+def get_conversation_continuation_prompt(language_code: str) -> str:
+    """
+    Returns the conversation continuation prompt formatted for the language.
+
+    :param language_code: String ISO 639-1 language code
+    :returns: String of the conversation prompt
+    """
+    return settings.conversation_continuation_prompt.format(
+        language=language_code_map[language_code]["language"],
     )
 
 
@@ -282,11 +331,14 @@ async def initialize_conversation(
     """
     user_details = await user.user_details.get()
     conversation_id = uuid.uuid4()
+    conversation_continuation_prompt = get_conversation_continuation_prompt(
+        user_details.current_language_code,
+    )
 
     await ConversationElementModel.create(
         conversation_id=conversation_id,
         role=ConversationElementRole.ASSISTANT,
-        content=settings.conversation_continuation_prompt,
+        content=conversation_continuation_prompt,
     )
 
     await UserConversationModel.create(

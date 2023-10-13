@@ -17,6 +17,7 @@ class UserConversationModel(FiaBaseModel):
     language_code = fields.CharField(
         null=False,
         unique=False,
+        default="de",
         max_length=2,  # noqa: WPS432
     )
 

@@ -41,3 +41,4 @@ class UserDetails(BaseModel):
 
     username: str
     times_logged_in: int
+    current_language_code: str

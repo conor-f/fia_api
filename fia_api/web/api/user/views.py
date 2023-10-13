@@ -117,6 +117,7 @@ async def get_user_details(
     return UserDetails(
         username=user_model.username,
         times_logged_in=user_details.times_logged_in,
+        current_language_code=user_details.current_language_code,
     )
 
 

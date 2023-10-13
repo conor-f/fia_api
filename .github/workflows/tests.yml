@@ -12,7 +12,7 @@ jobs:
       with:
         python-version: '3.11'
     - name: Install deps
-      uses: knowsuchagency/poetry-install@v2
+      uses: knowsuchagency/poetry-install@v1
       env:
         POETRY_VIRTUALENVS_CREATE: false
     - name: Run black check

@@ -352,11 +352,12 @@ async def initialize_conversation(
     return await get_response(str(conversation_id), message, user)
 
 
-async def get_text_from_audio(audio_file: UploadFile) -> str:
+async def get_text_from_audio(audio_file: UploadFile, language_code: str) -> str:
     """
     Given a file, return the text.
 
     :param audio_file: UploadFile object to transcode to text.
+    :param language_code: String language code the audio is in.
     :return: String text.
     """
     # TODO: Shouldn't have to do this dance with writing/reading the file!
@@ -366,7 +367,11 @@ async def get_text_from_audio(audio_file: UploadFile) -> str:
 
     with open("/tmp/whatever.wav", "rb") as in_fh:  # noqa: S108
         # TODO: Store the token usage too
-        return openai.Audio.transcribe("whisper-1", in_fh, language="de")["text"]
+        return openai.Audio.transcribe(
+            "whisper-1",
+            in_fh,
+            language=language_code,
+        )["text"]
 
 
 # TODO: Make this bytes or whatever.

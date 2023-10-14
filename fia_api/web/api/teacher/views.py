@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, UploadFile
+from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 
 from fia_api.db.models.user_model import UserModel
 from fia_api.web.api.teacher.schema import (
     ConverseResponse,
+    ConverseWithAudioRequest,
     GetAudioRequest,
     TeacherConverseRequest,
 )
@@ -46,32 +47,30 @@ async def converse(
 
 @router.post("/converse-with-audio", response_model=ConverseResponse)
 async def converse_with_audio(
-    conversation_id: str,
-    audio_file: UploadFile,
+    converse_with_audio_request: ConverseWithAudioRequest,
     user: AuthenticatedUser = Depends(get_current_user),
 ) -> ConverseResponse:
     """
     Starts or continues a conversation with the Teacher with audio.
 
-    :param conversation_id: The conversation ID being discussed.
-    :param audio_file: The file of the recorded audio.
+    :param converse_with_audio_request: The request object.
     :param user: The AuthenticatedUser making the request.
     :returns: ConverseResponse of mistakes and conversation.
     """
     # TODO: Should be the same endpoint as above.
-    # TODO: For some reason POST vars and File uploads are a mess. Fix all of
-    # this nonsense.
-    #   This is because the conversation_id is passed as a str, not a model.
-    message = await get_text_from_audio(audio_file)
+    message = await get_text_from_audio(
+        converse_with_audio_request.audio_file,
+        converse_with_audio_request.language_code,
+    )
 
-    if conversation_id == "new":
+    if converse_with_audio_request.conversation_id == "new":
         return await initialize_conversation(
             await UserModel.get(username=user.username),
             message,
         )
 
     return await get_response(
-        conversation_id,
+        converse_with_audio_request.conversation_id,
         message,
         await UserModel.get(username=user.username),
     )

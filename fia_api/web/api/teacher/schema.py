@@ -1,5 +1,6 @@
 from typing import Any, List, Optional, Union
 
+from fastapi import UploadFile
 from pydantic import BaseModel, Field
 
 
@@ -142,3 +143,11 @@ class GetAudioRequest(BaseModel):
     text: str
     language_code: str
     # TODO: Add features like language and speaker type?
+
+
+class ConverseWithAudioRequest(BaseModel):
+    """Request object for an audio file."""
+
+    conversation_id: str
+    language_code: str
+    audio_file: UploadFile

@@ -140,4 +140,5 @@ class GetAudioRequest(BaseModel):
     """Request to the get-audio endpoint."""
 
     text: str
+    language_code: str
     # TODO: Add features like language and speaker type?

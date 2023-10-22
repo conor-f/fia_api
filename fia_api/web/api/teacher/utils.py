@@ -112,7 +112,6 @@ async def get_learning_moments_from_message(
         user_conversation_model.language_code,
     )
 
-    logger.warning(learning_moments_prompt)
     openai_response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo-0613",
         messages=[
@@ -147,6 +146,52 @@ async def get_learning_moments_from_message(
         )
     except Exception:
         return LearningMoments(learning_moments=[])
+
+
+async def get_streamed_conversation_continuation(
+    conversation_id: str,
+) -> Any:
+    """
+    Continue the conversation with the user based on the context.
+
+    This version however streams the response back.
+
+    The conversation in the DB must be updated with the most recent user
+    message.
+
+    :param conversation_id: String conversation to continue on.
+    :returns: A stream of strings representing the message.
+    """
+    openai_response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo-0613",
+        messages=await get_messages_from_conversation_id(conversation_id),
+        functions=[
+            {
+                "name": "get_conversation_response",
+                "description": "Get the conversational response to the user's message.",
+                "parameters": ConversationContinuation.schema(),
+            },
+        ],
+        stream=True,
+    )
+
+    message = ""
+    for response in openai_response:
+        delta = response["choices"][0]["delta"]
+
+        if delta == {}:
+            break
+
+        content = delta["content"]
+
+        message += content
+        yield content
+
+    await ConversationElementModel.create(
+        conversation_id=uuid.UUID(conversation_id),
+        role=ConversationElementRole.SYSTEM,
+        content=message,
+    )
 
 
 async def get_conversation_continuation(
@@ -238,6 +283,45 @@ async def store_learning_moments(
         await learning_moment_model.save()
         await user_conversation_element.learning_moments.add(learning_moment_model)
         await user_conversation_element.save()
+
+
+async def get_streamed_response(
+    conversation_id: str,
+    message: str,
+    user: UserModel,
+) -> ConverseResponse:
+    """
+    Converse (streamed) with OpenAI.
+
+    Given the conversation ID, and a new message to add to it, store the
+    message, get the response, store that, and return it.
+
+    :param conversation_id: String ID representing the conversation.
+    :param message: String message the user wants to send.
+    :param user: UserModel, needed to store flashcards.
+    :return: ConverseResponse
+    """
+    user_conversation_element = await ConversationElementModel.create(
+        conversation_id=uuid.UUID(conversation_id),
+        role=ConversationElementRole.USER,
+        content=message,
+    )
+    await user_conversation_element.save()
+
+    conversation_continuation = await get_conversation_continuation(conversation_id)
+
+    await ConversationElementModel.create(
+        conversation_id=uuid.UUID(conversation_id),
+        role=ConversationElementRole.SYSTEM,
+        content=conversation_continuation.message,
+    )
+
+    return ConverseResponse(
+        conversation_id=conversation_id,
+        learning_moments=learning_moments,
+        input_message=message,
+        conversation_response=conversation_continuation.message,
+    )
 
 
 async def get_response(

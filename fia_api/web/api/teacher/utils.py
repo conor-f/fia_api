@@ -24,7 +24,6 @@ from fia_api.web.api.teacher.schema import (
     ConverseResponse,
     LearningMoments,
     Mistake,
-    Translation,
 )
 
 openai.api_key = settings.openai_api_key
@@ -112,7 +111,6 @@ async def get_learning_moments_from_message(
         user_conversation_model.language_code,
     )
 
-    logger.warning(learning_moments_prompt)
     openai_response = openai.ChatCompletion.create(
         model="gpt-3.5-turbo-0613",
         messages=[
@@ -205,14 +203,6 @@ async def create_flashcards_from_learning_moments(
                 parsed_learning_moment.corrected_section,
                 conversation_id,
                 explanation=parsed_learning_moment.explanation,
-            )
-        elif isinstance(parsed_learning_moment, Translation):
-            await create_flashcard(
-                user.username,
-                parsed_learning_moment.phrase,
-                parsed_learning_moment.translated_phrase,
-                conversation_id,
-                both_sides=True,
             )
         else:
             logger.error("Some weirdness going on....")

@@ -40,6 +40,12 @@ async def create_user(new_user_request: CreateUserRequest) -> None:
     :param new_user_request: new user.
     :raises HTTPException: When a username already exists
     """
+    logger.info(
+        {
+            "message": "Create user called",
+            "username": new_user_request.username,
+        },
+    )
     if await UserModel.exists(username=new_user_request.username):
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -54,6 +60,13 @@ async def create_user(new_user_request: CreateUserRequest) -> None:
         user_details=user_details_model,
     )
 
+    logger.info(
+        {
+            "message": "New user created",
+            "username": new_user_request.username,
+        },
+    )
+
 
 @router.post("/delete", status_code=200)  # noqa: WPS432
 async def delete_user(user: AuthenticatedUser = Depends(get_current_user)) -> None:
@@ -62,8 +75,22 @@ async def delete_user(user: AuthenticatedUser = Depends(get_current_user)) -> No
 
     :param user: The authenticated user to delete.
     """
+    logger.info(
+        {
+            "message": "Deleting user",
+            "username": user.username,
+        },
+    )
+
     user_model = await UserModel.get(username=user.username)
     await user_model.delete()
+
+    logger.info(
+        {
+            "message": "Deleted user",
+            "username": user.username,
+        },
+    )
 
 
 @router.post("/login", response_model=TokenSchema)
@@ -75,6 +102,12 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()) -> TokenSchema
     :returns: TokenSchema
     :raises HTTPException: For incorrect username/password
     """
+    logger.info(
+        {
+            "message": "Logging in",
+            "username": form_data.username,
+        },
+    )
     user = await UserModel.get(username=form_data.username)
 
     if not user:
@@ -93,6 +126,12 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends()) -> TokenSchema
     user_details.times_logged_in += 1
     await user_details.save()
 
+    logger.info(
+        {
+            "message": "Logged in",
+            "username": form_data.username,
+        },
+    )
     return TokenSchema(
         access_token=create_access_token(user.username),
         refresh_token=create_refresh_token(user.username),
@@ -112,12 +151,25 @@ async def set_user_details(
     :param set_user_details_request: See the schema for current info.
     :param user: The authenticated user to update.
     """
-    logger.warning("A")
+    logger.info(
+        {
+            "message": "Setting user details",
+            "username": user.username,
+            "language_code": set_user_details_request.language_code.lower(),
+        },
+    )
     user_model = await UserModel.get(username=user.username)
 
     user_details = await user_model.user_details.get()
     user_details.current_language_code = set_user_details_request.language_code.lower()
 
+    logger.info(
+        {
+            "message": "User details set",
+            "username": user.username,
+            "language_code": set_user_details_request.language_code.lower(),
+        },
+    )
     await user_details.save()
 
 
@@ -135,9 +187,21 @@ async def get_user_details(
     :param user: AuthenticatedUser
     :returns: UserDetails
     """
+    logger.info(
+        {
+            "message": "Getting user details",
+            "username": user.username,
+        },
+    )
     user_model = await UserModel.get(username=user.username)
     user_details = await user_model.user_details.get()
 
+    logger.info(
+        {
+            "message": "Got user details",
+            "username": user.username,
+        },
+    )
     return UserDetails(
         username=user_model.username,
         times_logged_in=user_details.times_logged_in,
@@ -159,6 +223,12 @@ async def list_user_conversations(
     :param user: AuthenticatedUser
     :returns: UserConversationList
     """
+    logger.info(
+        {
+            "message": "Listing user conversations",
+            "username": user.username,
+        },
+    )
     user_model = await UserModel.get(username=user.username)
     conversations = await UserConversationModel.filter(user=user_model).values()
 
@@ -171,6 +241,14 @@ async def list_user_conversations(
         )
         for conversation in conversations
     ]
+
+    logger.info(
+        {
+            "message": "Listed user conversations",
+            "username": user.username,
+            "conversations_len": len(conversation_list),
+        },
+    )
     return UserConversationList(conversations=conversation_list)
 
 
@@ -191,6 +269,13 @@ async def get_user_conversation(
     :returns: ConversationResponse
     :raises HTTPException: When they don't have permission to see conversation.
     """
+    logger.info(
+        {
+            "message": "Getting user conversation",
+            "username": user.username,
+            "conversation_id": conversation_id,
+        },
+    )
     user_model = await UserModel.get(username=user.username)
 
     if not await UserConversationModel.exists(  # noqa: WPS337
@@ -202,4 +287,11 @@ async def get_user_conversation(
             detail="Don't have permission to access that conversation.",
         )
 
+    logger.info(
+        {
+            "message": "Got user conversation",
+            "username": user.username,
+            "conversation_id": conversation_id,
+        },
+    )
     return await format_conversation_for_response(conversation_id)

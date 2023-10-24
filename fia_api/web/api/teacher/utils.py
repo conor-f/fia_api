@@ -115,7 +115,7 @@ async def get_learning_moments_from_message(
         model="gpt-3.5-turbo-0613",
         messages=[
             {
-                "role": "assistant",
+                "role": "system",
                 "content": learning_moments_prompt,
             },
             {
@@ -327,7 +327,7 @@ async def initialize_conversation(
 
     await ConversationElementModel.create(
         conversation_id=conversation_id,
-        role=ConversationElementRole.ASSISTANT,
+        role=ConversationElementRole.SYSTEM,
         content=conversation_continuation_prompt,
     )
 
